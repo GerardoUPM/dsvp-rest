@@ -1,11 +1,10 @@
 package edu.ctb.upm.midas.service._populate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import edu.ctb.upm.midas.client_modules.extraction.wikipedia.disease_list.api_response.DiseaseAlbumResourceService;
 import edu.ctb.upm.midas.common.util.Common;
-import edu.ctb.upm.midas.common.util.TimeProvider;
 import edu.ctb.upm.midas.common.util.UniqueId;
 import edu.ctb.upm.midas.constants.Constants;
-import edu.ctb.upm.midas.client_modules.extraction.wikipedia.disease_list.api_response.DiseaseAlbumResourceService;
 import edu.ctb.upm.midas.model.common.document_structure.Doc;
 import edu.ctb.upm.midas.model.common.document_structure.Section;
 import edu.ctb.upm.midas.model.common.document_structure.Source;
@@ -39,11 +38,6 @@ public class WikipediaPopulateDbNative {
 
     @Autowired
     ObjectMapper objectMapper;
-    @Autowired
-    private TimeProvider date;
-
-
-
 
     @Autowired
     private ResourceHelperNative resourceHelperNative;
@@ -121,7 +115,7 @@ public class WikipediaPopulateDbNative {
 
     public void insertDocumentData(Doc document, String sourceId, Date version, Source source, int docsCount, boolean isJSONRequest) throws IOException {
         String documentId = documentHelperNative.insert(sourceId, document, version);
-        System.out.println(docsCount + " Insert document: " + document.getDisease().getName() + "_" + documentId );
+        logger.info(docsCount + " Insert document: " + document.getDisease().getName() + "_" + documentId );
 
 //        System.out.println(docsCount + " Insert document: " + document.getDisease().getName() + "_" + documentId);
 

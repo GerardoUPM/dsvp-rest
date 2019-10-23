@@ -64,27 +64,29 @@ public class CodeHelperNative {
     public void insertIfExistByCodeList(List<Code> codeList, String documentId, Date version, String searchParamCodeRetrievalMethod) throws JsonProcessingException {
         Code existCode;
 
-        for (Code code: codeList) {
-            existCode = getCodeAndResourceIdByCodeAndResourceName( code );
+        if (codeList.size()>0) {
+            for (Code code : codeList) {
+                existCode = getCodeAndResourceIdByCodeAndResourceName(code);
 
-            if ( existCode == null ){//validar el resourceId por si no existe
-                int resourceId = resourceService.findIdByNameQuery( code.getResource().getName() );
-                if (resourceId == 0){
-                    //Insertar resource
-                    resourceService.insertNative(code.getResource().getName());
-                    resourceId = resourceService.findIdByNameQuery( code.getResource().getName() );
+                if (existCode == null) {//validar el resourceId por si no existe
+                    int resourceId = resourceService.findIdByNameQuery(code.getResource().getName());
+                    if (resourceId == 0) {
+                        //Insertar resource
+                        resourceService.insertNative(code.getResource().getName());
+                        resourceId = resourceService.findIdByNameQuery(code.getResource().getName());
+                    }
+                    codeService.insertNative(code.getCode(), resourceId);
+                    codeService.insertNativeHasCode(documentId, version, code.getCode(), resourceId);
+                    insertRetrievalMethodCode(code.getCode(), resourceId, searchParamCodeRetrievalMethod);
+                    if (code.getLink() != null) {
+                        String urlId = urlHelperNative.getUrl(code.getLink(), getId(code.getCode(), resourceId));
+                        codeService.insertNativeUrl(code.getCode(), resourceId, urlId);
+                    }
+                } else {
+                    //System.out.println("Document_id: " + documentId + " Version: " + version + " Code: " + codeEntity[0] + " ResourceName: " + codeEntity[1]);
+                    codeService.insertNativeHasCode(documentId, version, existCode.getCode(), existCode.getResource().getId());
+                    insertRetrievalMethodCode(existCode.getCode(), existCode.getResource().getId(), searchParamCodeRetrievalMethod);
                 }
-                codeService.insertNative( code.getCode(), resourceId );
-                codeService.insertNativeHasCode( documentId, version, code.getCode(), resourceId );
-                insertRetrievalMethodCode(code.getCode(), resourceId, searchParamCodeRetrievalMethod);
-                if (code.getLink()!=null) {
-                    String urlId = urlHelperNative.getUrl(code.getLink(), getId(code.getCode(), resourceId));
-                    codeService.insertNativeUrl(code.getCode(), resourceId, urlId);
-                }
-            }else{
-                //System.out.println("Document_id: " + documentId + " Version: " + version + " Code: " + codeEntity[0] + " ResourceName: " + codeEntity[1]);
-                codeService.insertNativeHasCode( documentId, version, existCode.getCode(), existCode.getResource().getId());
-                insertRetrievalMethodCode(existCode.getCode(), existCode.getResource().getId(), searchParamCodeRetrievalMethod);
             }
         }
     }
@@ -198,17 +200,23 @@ public class CodeHelperNative {
     public Code getCodeAndResourceIdByCodeAndResourceName(Code code){
 //        System.out.println("RESOURCE NAME A BUSCAR: " + code.getResource().getName());
         Resource existResource = resourceService.findByName( code.getResource().getName() );
-        if (existResource!=null){
-            resourceService.insertNative(code.getResource().getName());
-            existResource = resourceService.findByName( code.getResource().getName() );
-        }
-        Object[] codeObject = codeService.findByIdNative(code.getCode(), existResource.getResourceId());
-//        (String) codeEntity[0], (int) codeEntity[1]
         Code existCode = null;
-        if (existResource!=null && codeObject!=null)
-            existCode = new Code((String) codeObject[0], new edu.ctb.upm.midas.model.common.document_structure.code.Resource(existResource.getResourceId(), existResource.getName()));
-
+        if (existResource==null){
+            if (resourceService.insertNative(code.getResource().getName()) > 0) {
+                existResource = resourceService.findByName(code.getResource().getName());
+                Object[] codeObject = codeService.findByIdNative(code.getCode(), existResource.getResourceId());
+//        (String) codeEntity[0], (int) codeEntity[1]
+                if (existResource!=null && codeObject!=null)
+                    existCode = new Code((String) codeObject[0], new edu.ctb.upm.midas.model.common.document_structure.code.Resource(existResource.getResourceId(), existResource.getName()));
+            }
+        }else {
+            Object[] codeObject = codeService.findByIdNative(code.getCode(), existResource.getResourceId());
+//        (String) codeEntity[0], (int) codeEntity[1]
+            if (existResource != null && codeObject != null)
+                existCode = new Code((String) codeObject[0], new edu.ctb.upm.midas.model.common.document_structure.code.Resource(existResource.getResourceId(), existResource.getName()));
+        }
         return existCode;
+
     }
 
 

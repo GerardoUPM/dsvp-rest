@@ -319,10 +319,11 @@ public class WikipediaExtractService {
                     webLink.setId(count);
                     webLink.setUrl(common.replaceUnicodeToSpecialCharacters(disease.getUrl()));
                     webLink.setRelevant(isRelevant(disease));
-                    System.out.println(webLink);
+//                    System.out.println(webLink);
                     webLinkList.add(webLink);
                     count++;
                 }
+                System.out.println("Size of disease album: " + webLinkList.size());
                 //Validar que el source tenga información
                 ConfigurationDBpediaDiseaseList conf = new ConfigurationDBpediaDiseaseList();
                 conf.setAlbumId(album.getAlbumId());

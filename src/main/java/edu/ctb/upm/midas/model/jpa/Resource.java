@@ -57,7 +57,7 @@ import java.util.Objects;
 
         @NamedNativeQuery(
                 name = "Resource.insertNative",
-                query = "INSERT INTO resource (name) "
+                query = "INSERT IGNORE INTO resource (name) "
                         + "VALUES (:name)"
         )
 })
