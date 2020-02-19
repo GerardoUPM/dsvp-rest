@@ -58,10 +58,21 @@ public class HasSectionHelperNative {
             hasSectionService.insertNative(documentId, version, existSection.getSectionId());
         }else{
             //inserta la seccion si no existe
-            sectionHelperNative.insert(section.getName(), section.getDescription());
-            existSection = sectionService.findByName( section.getName() );
+            try {
+                sectionHelperNative.insert(section.getName(), section.getDescription());
+                existSection = sectionService.findByName( section.getName() );
+            }catch (Exception e){
+                logger.error("Error to insert a new SECTION called: " + section.getDescription());
+            }
             //inserta la relación entre el documento y la sección (insert ignore)
-            hasSectionService.insertNative(documentId, version, existSection.getSectionId());
+            if (existSection!=null) {
+                try {
+                    hasSectionService.insertNative(documentId, version, existSection.getSectionId());
+                } catch (Exception e) {
+                    logger.error("Error in hasSectionService.insertNative(documentId, version, existSection.getSectionId()); (line 67 to dev)");
+//                logger.error();
+                }
+            }
         }
         //retorna el id de la sección
         return existSection.getSectionId();
