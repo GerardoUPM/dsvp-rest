@@ -175,6 +175,24 @@ import java.util.Objects;
                         "c.code = :code " +
                         "AND r.name = :resource " +
                         "AND d.name = :diseaseName"
+        ),
+        @NamedNativeQuery(
+                name = "Disease.findAllWithTheirDISNETTermsBySourceAndSnapshotAndValidated",
+                query = " SELECT DISTINCT doc.date snapshot, d.disease_id, d.name 'disease_name', hsym.cui 'cui', sym.name 'term_name', getSemanticTypesBySymptom(hsym.cui) 'semantic_types', IF(hsym.validated, 'true', 'false') 'validated' " +
+                        "FROM disease d " +
+                        "INNER JOIN has_disease hd ON hd.disease_id = d.disease_id " +
+                        "INNER JOIN document doc ON doc.document_id = hd.document_id AND doc.date = hd.date " +
+                        "INNER JOIN has_source hs ON hs.document_id = doc.document_id AND hs.date = doc.date " +
+                        "INNER JOIN source sce ON sce.source_id = hs.source_id " +
+                        "-- symptoms\n" +
+                        "INNER JOIN has_section hsec ON hsec.document_id = doc.document_id AND hsec.date = doc.date " +
+                        "INNER JOIN has_text ht ON ht.document_id = hsec.document_id AND ht.date = hsec.date AND ht.section_id = hsec.section_id " +
+                        "INNER JOIN has_symptom hsym ON hsym.text_id = ht.text_id " +
+                        "INNER JOIN symptom sym ON sym.cui = hsym.cui " +
+                        "WHERE sce.name = :sourceName " +
+                        "AND hs.date = :snapshot " +
+                        "-- AND hsym.validated = :validated \n " +
+                        "GROUP BY doc.date, d.disease_id, d.name, hsym.cui, sym.name "
         )
 })
 

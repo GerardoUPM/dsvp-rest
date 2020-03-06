@@ -223,6 +223,22 @@ public class DiseaseRepositoryImpl extends AbstractDao<String, Disease>
         return disease;
     }
 
+    @SuppressWarnings("unchecked")
+    @Override
+    public List<Object[]> findAllWithTheirDISNETTermsBySourceAndSnapshotAndValidated(String sourceName, Date snapshot, boolean validated) {
+        List<Object[]> diseases = null;
+        List<Object[]> diseaseList = (List<Object[]>) getEntityManager()
+                .createNamedQuery("Disease.findAllWithTheirDISNETTermsBySourceAndSnapshotAndValidated")
+                .setParameter("sourceName", sourceName)
+                .setParameter("snapshot", snapshot)
+//                .setParameter("validated", validated)
+                //.setMaxResults(1)
+                .getResultList();
+        if (CollectionUtils.isNotEmpty(diseaseList))
+            diseases = diseaseList;//diseaseList.get(0);
+        return diseases;
+    }
+
     public void persist(Disease disease) {
         super.persist(disease);
     }

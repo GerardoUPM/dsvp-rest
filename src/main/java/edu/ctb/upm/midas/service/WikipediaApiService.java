@@ -8,6 +8,10 @@ import edu.ctb.upm.midas.model.common.document_structure.Link;
 import edu.ctb.upm.midas.model.common.document_structure.Reference;
 import edu.ctb.upm.midas.model.wikipediaApi.*;
 import edu.ctb.upm.midas.service.jpa.DocumentService;
+import edu.stanford.nlp.ling.HasWord;
+import edu.stanford.nlp.process.DocumentPreprocessor;
+import edu.stanford.nlp.process.PTBTokenizer;
+import edu.stanford.nlp.process.TokenizerFactory;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
@@ -328,6 +332,7 @@ public class WikipediaApiService {
                     Set<Map.Entry<String, JsonElement>> elementPages = pages.getAsJsonObject().entrySet();
 
                     //Valida que el mapa no sea nulo
+                    //<editor-fold desc="pagesElements_process">
                     if (elementPages != null) {
                         //Recorre los elementos del mapa que corresponde al elemento con el pageid,
                         // => " {"24811533": "
@@ -403,6 +408,7 @@ public class WikipediaApiService {
                             }//END if (elementPageInfo!=null)
                         }
                     }//END if (elementPages!=null)
+                    //</editor-fold>
 
                     //Si las fechas son iguales significa que se trata de la misma actualización (revision) y por lo tanto
                     //el mismo texto de la anterior se debe colocar en la actual actualización (revision)
@@ -453,6 +459,499 @@ public class WikipediaApiService {
         }
         return page;
     }
+
+
+
+    public Page getPageWithUserSnapshotBetweenTwoRevisionsId2(Disease disease, Snapshot firstSnapshot, Snapshot lastSnapshot, FileWriter fileWriter){
+//        System.out.println("disease: " + disease.getName() + " | first(" + firstSnapshot.getSnapshot() + "): " + firstSnapshot.getRevId() + " | last(" + lastSnapshot.getSnapshot() + "): " + lastSnapshot.getRevId());
+        Page page = new Page();
+        Revision previousR = null;
+        List<Revision> revisionList = new ArrayList<>();
+        Common common = new Common();
+        try {
+            int snapshotCount = 1;
+            String responseWikipediaAPI = "";
+            Revision revision = null;
+            String row = "";
+            Map<String, Integer> globalUserMap = new HashMap<String, Integer>();
+
+
+            responseWikipediaAPI = getWikipediaRevisionListByRevisionsId(disease.getName(), lastSnapshot.getRevId(), firstSnapshot.getRevId());
+//            System.out.println("responseWikipediaAPI: " + responseWikipediaAPI);
+            //<editor-fold desc="Description">
+            if (!common.isEmpty(responseWikipediaAPI)) {
+                //Parser string response Wikipedia API to Java JSON object
+                JsonElement jsonElement = parseWikipediaResponse(responseWikipediaAPI);
+                //Get information from Json object
+                JsonElement pages = jsonElement.getAsJsonObject().get(Constants.QUERY_ELEMENT_NAME).getAsJsonObject().get(Constants.PAGES_ELEMENT_NAME);
+                //Obtiene todos los elementos de un JsonElement en forma de mapa
+                Set<Map.Entry<String, JsonElement>> elementPages = pages.getAsJsonObject().entrySet();
+
+                //Valida que el mapa no sea nulo
+                if (elementPages != null) {
+                    //Recorre los elementos del mapa que corresponde al elemento con el pageid,
+                    // => " {"24811533": "
+                    for (Map.Entry<String, JsonElement> elementPage : elementPages) {
+//                System.out.println( elementPage.getKey()+ " <-> " + elementPage.getValue());
+                        //Obtiene todos los elementos de un JsonElement en forma de mapa
+                        Set<Map.Entry<String, JsonElement>> elementPageInfo = elementPage.getValue().getAsJsonObject().entrySet();
+                        //Valida que el mapa del elemento pages no sea nulo
+                        if (elementPageInfo != null) {
+                            //Recorre los elementos del mapa
+                            for (Map.Entry<String, JsonElement> element : elementPageInfo) {
+//                                System.out.println( element.getKey()+ " <-> " + element.getValue());
+
+                                //Verifica cada elemento para asignar sus valores a los campos correspondientes
+                                //del recien creado objeto Page
+                                getPageIdAndSetInPageObject(page, element);
+                                getPageTitleAndSetInPageObject(page, element);
+//                                System.out.println(element.getKey() + " - " + element.getValue());
+                                //Valida que el elemento del mapa sea de nombre "revisions". Porque necesita
+                                //ser tratado especialmente para poder acceder a sus elementos y valores
+                                if (element.getKey().equalsIgnoreCase(Constants.REVISIONS_ELEMENT_NAME)) {
+//                                                System.out.println("ENTRA: " + element.getValue().toString());
+                                    //Parsea el elemento revision
+                                    JsonElement revisionsSet = parseWikipediaResponse(
+                                            //Para dar formato y hacer el parse a Json del String, es necesario
+                                            //quitar el primer y el último elemento que son "[" y "]" para obtener un
+                                            //String(JSON) que inicie y termine con "{" y "}"
+//                                                        deleteFirstAndLastChar(element.getValue().toString())
+                                            //NO TENGO IDEA PORQUE EN ESTA OCACIÓN NO SE TENIAN QUE ELIMINAR LOS CORCHETES
+                                            element.getValue().toString()
+                                    );
+                                    //Doble verificación para saber si el elemento "revisions" es un objeto Json
+//                                                System.out.println("(" + revisionsSet.isJsonArray() + ") revisionsSet: " + revisionsSet.getClass().getTypeName());
+                                    boolean isJsonArray = revisionsSet.isJsonArray();
+
+                                    if (isJsonArray) {
+                                        //Se recorren los elementos del mapa "revisions"
+                                        System.out.println("SIZE of revision list: " + revisionsSet.getAsJsonArray().size());
+                                        //<editor-fold desc="for (JsonElement revElement : revisionsSet.getAsJsonArray()) {">
+                                        for (JsonElement revElement : revisionsSet.getAsJsonArray()) {
+//                                                        System.out.println("JsonElement: " + revElement.toString());
+                                            JsonElement jsonElementRev = parseWikipediaResponse(
+                                                    //Para dar formato y hacer el parse a Json del String, es necesario
+                                                    //quitar el primer y el último elemento que son "[" y "]" para obtener un
+                                                    //String(JSON) que inicie y termine con "{" y "}"
+//                                                        deleteFirstAndLastChar(element.getValue().toString())
+                                                    //NO TENGO IDEA PORQUE EN ESTA OCACIÓN NO SE TENIAN QUE ELIMINAR LOS CORCHETES
+                                                    revElement.toString()
+                                            );
+//                                                        System.out.println("(" + jsonElementRev.isJsonObject() + ") revisionsSet: " + jsonElementRev.getClass().getTypeName());
+                                            boolean isJsonObject = jsonElementRev.isJsonObject();
+                                            if (isJsonObject) {
+//                                                            System.out.println("ENTRA!!!!!!!!!!");
+                                                revision = new Revision();
+                                                for (Map.Entry<String, JsonElement> jsonElementRevMap : jsonElementRev.getAsJsonObject().entrySet()) {
+                                                    getRevIdAndSetInRevisionObject(revision, jsonElementRevMap);
+                                                    getParentIdAndSetInRevisionObject(revision, jsonElementRevMap);
+                                                    getMinorAndSetInRevisionObject(revision, jsonElementRevMap);
+                                                    getUserAndSetInRevisionObject(revision, jsonElementRevMap);
+                                                    getUserIdAndSetInRevisionObject(revision, jsonElementRevMap);
+                                                    getTimestampAndSetInRevisionObject(revision, jsonElementRevMap);
+                                                    getSizeAndSetInRevisionObject(revision, jsonElementRevMap);
+                                                    getCommentAndSetInRevisionObject(revision, jsonElementRevMap);
+//                                                                System.out.println(jsonElementRevMap.getKey() + " - " + jsonElementRevMap.getValue());
+                                                }
+                                                revisionList.add(revision);
+                                                globalUserMap.put(revision.getUser(), revision.getUserid());
+//                                                System.out.println("USER_ID: " + revision.getUserid() + " | USER_NAME: " + revision.getUser());
+                                            }
+                                        }
+                                        //</editor-fold>
+//
+                                    }//END if (isJsonObject)
+                                }//END if compare if the element is kind of "revisions"
+//                                            System.out.println("ITERACION: " + revisionList.toString());
+                                if (element.getKey().equalsIgnoreCase(Constants.REDIRECTS_ELEMENT_NAME)) {
+                                    JsonArray redirectSet = element.getValue().getAsJsonArray();
+                                    //Doble verificación para saber si el elemento "revisions" es un objeto Json
+                                    if (redirectSet != null) {
+                                        for (JsonElement redirectElement : redirectSet) {
+                                            JsonObject redirectObj = redirectElement.getAsJsonObject();
+                                            Integer redirectpageid = (redirectObj.get(Constants.PAGES_ELEMENT_PAGEID_NAME) instanceof JsonNull) ? 0 : (redirectObj.get(Constants.PAGES_ELEMENT_PAGEID_NAME).getAsInt());
+                                            String redirectpagetitle = redirectObj.get(Constants.PAGES_ELEMENT_TITLE_NAME).getAsString();
+                                            if (disease.getName().equalsIgnoreCase(redirectpagetitle)) {
+                                                page.setIsredirect(true);
+                                                page.setRedirectpageid(redirectpageid);
+                                                page.setRedirectpagetitle(redirectpagetitle);
+//                                                    break;
+                                            }
+                                        }
+
+                                    }
+                                }//END if compare if the element is kind of "redirects"
+                            }//END for that each element of pages element
+                        }//END if (elementPageInfo!=null)
+                    }
+                }//END if (elementPages!=null)
+            }
+            //</editor-fold>
+            row = disease.getId() + Constants.COMMA + Constants.QUOTATION_MARKS + disease.getName() + Constants.QUOTATION_MARKS + Constants.COMMA + globalUserMap.size();
+            System.out.println("row: " + row);
+            fileWriter.write(row + "\n");
+//            System.out.println("revisionList.toString() => " + revisionList.toString());
+//            removeRepetedRevision(revisionList);
+            if (page!=null){
+                page.setRevisions(revisionList);
+                page.setRevisionCount(revisionList.size());
+            }
+        }catch (Exception e){
+            disease.setScorn(true);
+            logger.error("Error getPageWithRevisionListBetweenTwoRevisionsId: pageTitle:" + disease.getName(), e);
+        }
+        return page;
+    }
+
+    /*
+    *
+    * Falta que cuente los autores:
+    *   Para ello debo hace una lista para ir contandolos
+    *
+    * */
+    public Page getPageWithUserSnapshotBetweenTwoRevisionsId(Disease disease, FileWriter fileWriter){
+        Page page = new Page();
+        Revision previousR = null;
+        List<Revision> revisionList = new ArrayList<>();
+        Common common = new Common();
+        try {
+            int snapshotCount = 1;
+            int userCount = 0;
+            String csvString = "";
+            Integer currentRevId = 0;
+            Integer previousRevId = 0;
+            Long currentCharCount = 0l;
+            Long previousCharCount = 0l;
+            String row = "";
+            Map<Integer, String> globalUserMap = new HashMap<Integer, String>();
+            Map<String, Integer> globalUserMap2 = new HashMap<String, Integer>();
+            for (Snapshot snapshot: disease.getSnapshots()) {
+                try {
+                    String responseWikipediaAPI = "";
+                    currentRevId = snapshot.getRevId();
+                    Revision revision = null;
+                    Map<Integer, String> userMap = new HashMap<Integer, String>();
+
+                    if (currentRevId.equals(previousRevId)){
+//                        System.out.println("ES EL MISMO...");
+                    }else {
+
+                        if (snapshotCount == 1) {
+                            previousRevId = 0;
+//                        responseWikipediaAPI = getWikipediaRevisionListByRevisionsId(disease.getName(), currentRevId, currentRevId);
+                        } else {
+//                            System.out.println("else: disease.getName(): " + disease.getName() + ", currentRevId: " + currentRevId + ", previousRevId: " + previousRevId);
+                        responseWikipediaAPI = getWikipediaRevisionListByRevisionsId(disease.getName(), currentRevId, previousRevId);
+                        }
+//                        System.out.println("Wikipedia API response = " + responseWikipediaAPI);
+
+                        if (!common.isEmpty(responseWikipediaAPI)) {
+                            //Parser string response Wikipedia API to Java JSON object
+                            JsonElement jsonElement = parseWikipediaResponse(responseWikipediaAPI);
+                            //Get information from Json object
+                            JsonElement pages = jsonElement.getAsJsonObject().get(Constants.QUERY_ELEMENT_NAME).getAsJsonObject().get(Constants.PAGES_ELEMENT_NAME);
+                            //Obtiene todos los elementos de un JsonElement en forma de mapa
+                            Set<Map.Entry<String, JsonElement>> elementPages = pages.getAsJsonObject().entrySet();
+
+                            //Valida que el mapa no sea nulo
+                            if (elementPages != null) {
+                                //Recorre los elementos del mapa que corresponde al elemento con el pageid,
+                                // => " {"24811533": "
+                                for (Map.Entry<String, JsonElement> elementPage : elementPages) {
+//                System.out.println( elementPage.getKey()+ " <-> " + elementPage.getValue());
+                                    //Obtiene todos los elementos de un JsonElement en forma de mapa
+                                    Set<Map.Entry<String, JsonElement>> elementPageInfo = elementPage.getValue().getAsJsonObject().entrySet();
+                                    //Valida que el mapa del elemento pages no sea nulo
+                                    if (elementPageInfo != null) {
+                                        //Recorre los elementos del mapa
+                                        for (Map.Entry<String, JsonElement> element : elementPageInfo) {
+//                                System.out.println( element.getKey()+ " <-> " + element.getValue());
+
+                                            //Verifica cada elemento para asignar sus valores a los campos correspondientes
+                                            //del recien creado objeto Page
+                                            getPageIdAndSetInPageObject(page, element);
+                                            getPageTitleAndSetInPageObject(page, element);
+//                                System.out.println(element.getKey() + " - " + element.getValue());
+                                            //Valida que el elemento del mapa sea de nombre "revisions". Porque necesita
+                                            //ser tratado especialmente para poder acceder a sus elementos y valores
+                                            if (element.getKey().equalsIgnoreCase(Constants.REVISIONS_ELEMENT_NAME)) {
+//                                                System.out.println("ENTRA: " + element.getValue().toString());
+                                                //Parsea el elemento revision
+                                                JsonElement revisionsSet = parseWikipediaResponse(
+                                                        //Para dar formato y hacer el parse a Json del String, es necesario
+                                                        //quitar el primer y el último elemento que son "[" y "]" para obtener un
+                                                        //String(JSON) que inicie y termine con "{" y "}"
+//                                                        deleteFirstAndLastChar(element.getValue().toString())
+                                                        //NO TENGO IDEA PORQUE EN ESTA OCACIÓN NO SE TENIAN QUE ELIMINAR LOS CORCHETES
+                                                        element.getValue().toString()
+                                                );
+                                                //Doble verificación para saber si el elemento "revisions" es un objeto Json
+//                                                System.out.println("(" + revisionsSet.isJsonArray() + ") revisionsSet: " + revisionsSet.getClass().getTypeName());
+                                                boolean isJsonArray = revisionsSet.isJsonArray();
+
+                                                if (isJsonArray) {
+                                                    //Se recorren los elementos del mapa "revisions"
+//                                                    System.out.println("SIZE of revision list: " + revisionsSet.getAsJsonArray().size() + " BETWEEN => " + previousRevId + " AND " + currentRevId + " :: " );
+                                                    int revisionSize = revisionsSet.getAsJsonArray().size();
+                                                    int countRev = 1;
+                                                    for (JsonElement revElement : revisionsSet.getAsJsonArray()) {
+                                                        if (disease.getSnapshots().size() != snapshotCount) {
+                                                            if (revisionSize == countRev) continue;
+                                                        }
+//                                                        System.out.println("JsonElement: " + revElement.toString());
+                                                        JsonElement jsonElementRev = parseWikipediaResponse(
+                                                                //Para dar formato y hacer el parse a Json del String, es necesario
+                                                                //quitar el primer y el último elemento que son "[" y "]" para obtener un
+                                                                //String(JSON) que inicie y termine con "{" y "}"
+//                                                        deleteFirstAndLastChar(element.getValue().toString())
+                                                                //NO TENGO IDEA PORQUE EN ESTA OCACIÓN NO SE TENIAN QUE ELIMINAR LOS CORCHETES
+                                                                revElement.toString()
+                                                        );
+//                                                        System.out.println("(" + jsonElementRev.isJsonObject() + ") revisionsSet: " + jsonElementRev.getClass().getTypeName());
+                                                        boolean isJsonObject = jsonElementRev.isJsonObject();
+                                                        if (isJsonObject) {
+//                                                            System.out.println("ENTRA!!!!!!!!!!");
+                                                            revision = new Revision();
+                                                            for (Map.Entry<String, JsonElement> jsonElementRevMap : jsonElementRev.getAsJsonObject().entrySet()) {
+                                                                getRevIdAndSetInRevisionObject(revision, jsonElementRevMap);
+                                                                getParentIdAndSetInRevisionObject(revision, jsonElementRevMap);
+                                                                getMinorAndSetInRevisionObject(revision, jsonElementRevMap);
+                                                                getUserAndSetInRevisionObject(revision, jsonElementRevMap);
+                                                                getUserIdAndSetInRevisionObject(revision, jsonElementRevMap);
+                                                                getTimestampAndSetInRevisionObject(revision, jsonElementRevMap);
+                                                                getSizeAndSetInRevisionObject(revision, jsonElementRevMap);
+                                                                getCommentAndSetInRevisionObject(revision, jsonElementRevMap);
+//                                                                System.out.println(jsonElementRevMap.getKey() + " - " + jsonElementRevMap.getValue());
+                                                            }
+                                                            userMap.put(revision.getUserid(), revision.getUser());
+//                                                            globalUserMap.put(revision.getUserid(), revision.getUser());
+                                                            globalUserMap2.put(revision.getUser(), revision.getUserid());
+//                                                            System.out.println("REVISION: " + revision);
+                                                            System.out.println("USER_ID: " + revision.getUserid() + " | USER_NAME: " + revision.getUser());
+                                                            revisionList.add(revision);
+                                                            countRev++;
+                                                        }
+                                                    }
+//                                                    if (previousR == null) {
+//                                                        revision.setPreviousDate("");
+//                                                    } else {
+//                                                        revision.setPreviousDate(previousR.getDate());
+//                                                    }
+//                                                    snapshot.setRevId(revision.getRevid());
+//                                                    revisionList.add(revision);
+//                                                    System.out.println("REVISION LIST: "+revisionList);
+                                                }//END if (isJsonObject)
+                                            }//END if compare if the element is kind of "revisions"
+//                                            System.out.println("ITERACION: " + revisionList.toString());
+                                            if (element.getKey().equalsIgnoreCase(Constants.REDIRECTS_ELEMENT_NAME)) {
+                                                JsonArray redirectSet = element.getValue().getAsJsonArray();
+                                                //Doble verificación para saber si el elemento "revisions" es un objeto Json
+                                                if (redirectSet != null) {
+                                                    for (JsonElement redirectElement : redirectSet) {
+                                                        JsonObject redirectObj = redirectElement.getAsJsonObject();
+                                                        Integer redirectpageid = (redirectObj.get(Constants.PAGES_ELEMENT_PAGEID_NAME) instanceof JsonNull) ? 0 : (redirectObj.get(Constants.PAGES_ELEMENT_PAGEID_NAME).getAsInt());
+                                                        String redirectpagetitle = redirectObj.get(Constants.PAGES_ELEMENT_TITLE_NAME).getAsString();
+                                                        if (disease.getName().equalsIgnoreCase(redirectpagetitle)) {
+                                                            page.setIsredirect(true);
+                                                            page.setRedirectpageid(redirectpageid);
+                                                            page.setRedirectpagetitle(redirectpagetitle);
+//                                                    break;
+                                                        }
+                                                    }
+                                                }
+                                            }//END if compare if the element is kind of "redirects"
+                                        }//END for that each element of pages element
+                                    }//END if (elementPageInfo!=null)
+                                }
+                            }//END if (elementPages!=null)
+                        }
+                    }
+//                System.out.println(revision.toString());
+
+                    //PONER ESTO AL FINAL
+//                    System.out.println("snapshot: " + snapshot.getSnapshot() + "(" + snapshot.getRevId() + ")" + "userMap: " + userMap.size());
+                    //<editor-fold desc="VALE PARA OBTENER LOS AUTORES SEGUN CADA SNAPSHOT">
+//                    if (snapshotCount == 1) {
+//                        csvString = userMap.size() + "";
+//                    } else {
+//                        csvString = csvString + Constants.COMMA + userMap.size();
+//                    }
+                    //</editor-fold>
+//                    boolean isRev = isRevIdInASnapshotList(disease.getSnapshots(), currentRevId);
+//                    Revision revisionExist = getRevisionBySnapshot(disease.getPage().getRevisions(), currentRevId);
+
+//                    if (snapshotCount == 1) {
+//                        csvString = userMap.size() + "";
+//                    } else {
+//                        if (isRev){
+//                            if (snapshot.getRevId().equals(previousRevId)){
+//                                csvString = csvString + Constants.COMMA + 0;
+//                            }
+//                        }
+//                        else {
+//                            csvString = csvString + Constants.COMMA + userMap.size();
+//                        }
+//                    }
+                    previousRevId = currentRevId;
+                    snapshotCount++;
+
+                }catch (Exception e){
+                    disease.setScorn(true);
+                    logger.error("Error getPageWithUserSnapshotBetweenTwoRevisionsId: pageTitle:" + disease.getName() + " | snapshot:" + snapshot, e);
+                }
+            }
+//            row = disease.getId() + Constants.COMMA + Constants.QUOTATION_MARKS + disease.getName() + Constants.QUOTATION_MARKS + Constants.COMMA + csvString;
+            row = disease.getId() + Constants.COMMA + Constants.QUOTATION_MARKS + disease.getName() + Constants.QUOTATION_MARKS + Constants.COMMA + globalUserMap2.size();
+            System.out.println("row: " + row);
+            fileWriter.write(row + "\n");
+
+//            System.out.println("revisionList.toString() => " + revisionList.toString());
+//            removeRepetedRevision(revisionList);
+            if (page!=null){
+                page.setRevisions(revisionList);
+                page.setRevisionCount(revisionList.size());
+            }
+        }catch (Exception e){
+            disease.setScorn(true);
+            logger.error("Error getPageIdAndTheirSpecificRevisionByTitleAndSnapshot: pageTitle:" + disease.getName(), e);
+        }
+        return page;
+    }
+
+
+    public Page getPageWithRevisionListBetweenTwoRevisionsId(Disease disease, Snapshot firstSnapshot, Snapshot lastSnapshot){
+//        System.out.println("disease: " + disease.getName() + " | first(" + firstSnapshot.getSnapshot() + "): " + firstSnapshot.getRevId() + " | last(" + lastSnapshot.getSnapshot() + "): " + lastSnapshot.getRevId());
+        Page page = new Page();
+        Revision previousR = null;
+        List<Revision> revisionList = new ArrayList<>();
+        Common common = new Common();
+        try {
+            int snapshotCount = 1;
+            String responseWikipediaAPI = "";
+            Revision revision = null;
+
+
+            responseWikipediaAPI = getWikipediaRevisionListByRevisionsId(disease.getName(), lastSnapshot.getRevId(), firstSnapshot.getRevId());
+//            System.out.println("responseWikipediaAPI: " + responseWikipediaAPI);
+            //<editor-fold desc="Description">
+            if (!common.isEmpty(responseWikipediaAPI)) {
+                //Parser string response Wikipedia API to Java JSON object
+                JsonElement jsonElement = parseWikipediaResponse(responseWikipediaAPI);
+                //Get information from Json object
+                JsonElement pages = jsonElement.getAsJsonObject().get(Constants.QUERY_ELEMENT_NAME).getAsJsonObject().get(Constants.PAGES_ELEMENT_NAME);
+                //Obtiene todos los elementos de un JsonElement en forma de mapa
+                Set<Map.Entry<String, JsonElement>> elementPages = pages.getAsJsonObject().entrySet();
+
+                //Valida que el mapa no sea nulo
+                if (elementPages != null) {
+                    //Recorre los elementos del mapa que corresponde al elemento con el pageid,
+                    // => " {"24811533": "
+                    for (Map.Entry<String, JsonElement> elementPage : elementPages) {
+//                System.out.println( elementPage.getKey()+ " <-> " + elementPage.getValue());
+                        //Obtiene todos los elementos de un JsonElement en forma de mapa
+                        Set<Map.Entry<String, JsonElement>> elementPageInfo = elementPage.getValue().getAsJsonObject().entrySet();
+                        //Valida que el mapa del elemento pages no sea nulo
+                        if (elementPageInfo != null) {
+                            //Recorre los elementos del mapa
+                            for (Map.Entry<String, JsonElement> element : elementPageInfo) {
+//                                System.out.println( element.getKey()+ " <-> " + element.getValue());
+
+                                //Verifica cada elemento para asignar sus valores a los campos correspondientes
+                                //del recien creado objeto Page
+                                getPageIdAndSetInPageObject(page, element);
+                                getPageTitleAndSetInPageObject(page, element);
+//                                System.out.println(element.getKey() + " - " + element.getValue());
+                                //Valida que el elemento del mapa sea de nombre "revisions". Porque necesita
+                                //ser tratado especialmente para poder acceder a sus elementos y valores
+                                if (element.getKey().equalsIgnoreCase(Constants.REVISIONS_ELEMENT_NAME)) {
+//                                                System.out.println("ENTRA: " + element.getValue().toString());
+                                    //Parsea el elemento revision
+                                    JsonElement revisionsSet = parseWikipediaResponse(
+                                            //Para dar formato y hacer el parse a Json del String, es necesario
+                                            //quitar el primer y el último elemento que son "[" y "]" para obtener un
+                                            //String(JSON) que inicie y termine con "{" y "}"
+//                                                        deleteFirstAndLastChar(element.getValue().toString())
+                                            //NO TENGO IDEA PORQUE EN ESTA OCACIÓN NO SE TENIAN QUE ELIMINAR LOS CORCHETES
+                                            element.getValue().toString()
+                                    );
+                                    //Doble verificación para saber si el elemento "revisions" es un objeto Json
+//                                                System.out.println("(" + revisionsSet.isJsonArray() + ") revisionsSet: " + revisionsSet.getClass().getTypeName());
+                                    boolean isJsonArray = revisionsSet.isJsonArray();
+
+                                    if (isJsonArray) {
+                                        //Se recorren los elementos del mapa "revisions"
+                                        System.out.println("SIZE of revision list: " + revisionsSet.getAsJsonArray().size());
+                                        //<editor-fold desc="for (JsonElement revElement : revisionsSet.getAsJsonArray()) {">
+                                        for (JsonElement revElement : revisionsSet.getAsJsonArray()) {
+//                                                        System.out.println("JsonElement: " + revElement.toString());
+                                            JsonElement jsonElementRev = parseWikipediaResponse(
+                                                    //Para dar formato y hacer el parse a Json del String, es necesario
+                                                    //quitar el primer y el último elemento que son "[" y "]" para obtener un
+                                                    //String(JSON) que inicie y termine con "{" y "}"
+//                                                        deleteFirstAndLastChar(element.getValue().toString())
+                                                    //NO TENGO IDEA PORQUE EN ESTA OCACIÓN NO SE TENIAN QUE ELIMINAR LOS CORCHETES
+                                                    revElement.toString()
+                                            );
+//                                                        System.out.println("(" + jsonElementRev.isJsonObject() + ") revisionsSet: " + jsonElementRev.getClass().getTypeName());
+                                            boolean isJsonObject = jsonElementRev.isJsonObject();
+                                            if (isJsonObject) {
+//                                                            System.out.println("ENTRA!!!!!!!!!!");
+                                                revision = new Revision();
+                                                for (Map.Entry<String, JsonElement> jsonElementRevMap : jsonElementRev.getAsJsonObject().entrySet()) {
+                                                    getRevIdAndSetInRevisionObject(revision, jsonElementRevMap);
+                                                    getParentIdAndSetInRevisionObject(revision, jsonElementRevMap);
+                                                    getMinorAndSetInRevisionObject(revision, jsonElementRevMap);
+                                                    getUserAndSetInRevisionObject(revision, jsonElementRevMap);
+                                                    getUserIdAndSetInRevisionObject(revision, jsonElementRevMap);
+                                                    getTimestampAndSetInRevisionObject(revision, jsonElementRevMap);
+                                                    getSizeAndSetInRevisionObject(revision, jsonElementRevMap);
+                                                    getCommentAndSetInRevisionObject(revision, jsonElementRevMap);
+//                                                                System.out.println(jsonElementRevMap.getKey() + " - " + jsonElementRevMap.getValue());
+                                                }
+                                                revisionList.add(revision);
+                                            }
+                                        }
+                                        //</editor-fold>
+//
+                                    }//END if (isJsonObject)
+                                }//END if compare if the element is kind of "revisions"
+//                                            System.out.println("ITERACION: " + revisionList.toString());
+                                if (element.getKey().equalsIgnoreCase(Constants.REDIRECTS_ELEMENT_NAME)) {
+                                    JsonArray redirectSet = element.getValue().getAsJsonArray();
+                                    //Doble verificación para saber si el elemento "revisions" es un objeto Json
+                                    if (redirectSet != null) {
+                                        for (JsonElement redirectElement : redirectSet) {
+                                            JsonObject redirectObj = redirectElement.getAsJsonObject();
+                                            Integer redirectpageid = (redirectObj.get(Constants.PAGES_ELEMENT_PAGEID_NAME) instanceof JsonNull) ? 0 : (redirectObj.get(Constants.PAGES_ELEMENT_PAGEID_NAME).getAsInt());
+                                            String redirectpagetitle = redirectObj.get(Constants.PAGES_ELEMENT_TITLE_NAME).getAsString();
+                                            if (disease.getName().equalsIgnoreCase(redirectpagetitle)) {
+                                                page.setIsredirect(true);
+                                                page.setRedirectpageid(redirectpageid);
+                                                page.setRedirectpagetitle(redirectpagetitle);
+//                                                    break;
+                                            }
+                                        }
+                                    }
+                                }//END if compare if the element is kind of "redirects"
+                            }//END for that each element of pages element
+                        }//END if (elementPageInfo!=null)
+                    }
+                }//END if (elementPages!=null)
+            }
+            //</editor-fold>
+//            System.out.println("revisionList.toString() => " + revisionList.toString());
+//            removeRepetedRevision(revisionList);
+            if (page!=null){
+                page.setRevisions(revisionList);
+                page.setRevisionCount(revisionList.size());
+            }
+        }catch (Exception e){
+            disease.setScorn(true);
+            logger.error("Error getPageWithRevisionListBetweenTwoRevisionsId: pageTitle:" + disease.getName(), e);
+        }
+        return page;
+    }
+
 
 
     public List<Revision> removeRepetedRevision(List<Revision> elements){
@@ -510,6 +1009,42 @@ public class WikipediaApiService {
 //        System.out.println("HTML_PARSE => " + doc.outerHtml());
 
         return characterCount;
+    }
+
+
+    public List<String> getAllTextsFromARevision(String htmlText){
+        List<String> textList = new ArrayList<>();
+        org.jsoup.nodes.Document doc = Jsoup.parse(htmlText);
+
+        Elements paragraphs = doc.getElementsByTag(Constants.HTML_P);
+        Elements tables = doc.getElementsByTag(Constants.HTML_TABLE);
+        Elements ulElements = doc.getElementsByTag(Constants.HTML_UL);
+        Elements olElements = doc.getElementsByTag(Constants.HTML_OL);
+        Elements dlElements = doc.getElementsByTag(Constants.HTML_DL);
+        //todos los caption de imagenes, exepto la del infobox,
+        //que esa ya se obtiene en "tables"
+        Elements imgElements = doc.select(Constants.QUERY_DIV_CLASS + "thumbcaption" + Constants.RIGHT_PARENTHESIS);
+
+        for (Element paragraph: paragraphs) {
+            textList.add(paragraph.text());
+        }
+        for (Element table: tables) {
+            textList.add(table.text());
+        }
+        for (Element ulElement: ulElements) {
+            textList.add(ulElement.text());
+        }
+        for (Element olElement: olElements) {
+            textList.add(olElement.text());
+        }
+        for (Element dlElement: dlElements) {
+            textList.add(dlElement.text());
+        }
+        for (Element imgElement: imgElements) {
+            textList.add(imgElement.text());
+        }
+
+        return textList;
     }
 
 
@@ -662,7 +1197,7 @@ public class WikipediaApiService {
 
     public JsonElement parseWikipediaResponse(String wikipediaResponse){
         JsonElement jsonElement = null;
-//        try {
+        try {
             jsonElement = new JsonParser().parse(
                     new InputStreamReader(
                             new ByteArrayInputStream(
@@ -670,9 +1205,9 @@ public class WikipediaApiService {
                             )
                     )
             );
-//        }catch (Exception e){
-//            logger.error("Error parser String Wikipedia response", e.getMessage());
-//        }
+        }catch (Exception e){
+            logger.error("Error parser String Wikipedia response", wikipediaResponse, e.getMessage());
+        }
         return jsonElement;
     }
 
@@ -683,6 +1218,21 @@ public class WikipediaApiService {
         String response = "";
         try {
             URL url = new URL("https://en.wikipedia.org/w/api.php?action=query&prop=revisions|redirects&format=json&rvprop=ids|flags|timestamp|userid|user|size|comment&rvstart=" + snapshot + "T00:00:00Z&rvdir=older&rvlimit=1&redirects&titles=" + titleArticle.replace(" ", Constants.BLANK_SPACE_CODE));
+            response = getResponseBody(url);
+        }catch (Exception e){
+            logger.error("Error to make Wikipedia API URL", e);
+        }
+        return response;
+    }
+
+
+    public String getWikipediaRevisionListByRevisionsId(String titleArticle, Integer currentRevID, Integer previousRevID) {
+        //title: Blue rubber bleb nevus syndrome
+        //snapshot: 2018-02-15
+        String response = "";
+        try {
+//            System.out.println("https://en.wikipedia.org/w/api.php?action=query&prop=revisions|redirects&format=json&rvprop=ids|flags|timestamp|userid|user|size|comment&rvstartid=" + previousRevID + "&rvendid=" + currentRevID + "&rvdir=newer&rvlimit=5000&redirects&titles=" + titleArticle.replace(" ", Constants.BLANK_SPACE_CODE));
+            URL url = new URL("https://en.wikipedia.org/w/api.php?action=query&prop=revisions|redirects&format=json&rvprop=ids|flags|timestamp|userid|user|size|comment&rvstartid=" + previousRevID + "&rvendid=" + currentRevID + "&rvdir=newer&rvlimit=5000&redirects&titles=" + titleArticle.replace(" ", Constants.BLANK_SPACE_CODE));
             response = getResponseBody(url);
         }catch (Exception e){
             logger.error("Error to make Wikipedia API URL", e);
@@ -868,7 +1418,7 @@ public class WikipediaApiService {
     }
 
 
-    public void analysisAboutToTheJSONDiseases(boolean character, boolean references, boolean medicalTerms) throws IOException {
+    public void analysisAboutToTheJSONDiseases(boolean character, boolean references, boolean medicalTerms, boolean pubmedRef, boolean authors, boolean allWikiRevision) throws IOException {
         List<Disease> diseasesErrorReferences = new ArrayList<Disease>(){{
             add(new Disease("DIS007220", "Abdominal mass"))	;
 
@@ -948,17 +1498,30 @@ public class WikipediaApiService {
         TimeProvider timeProvider = new TimeProvider();
         File dir = new File(Constants.ANALYSIS_HISTORY_DIRECTORY/*"tmp/test/"*/);
         File[] directoryListing = dir.listFiles();
-//        String diseaseCharactersReport = timeProvider.getNowFormatyyyyMMdd() + "_wikipedia_diseases_characters.csv";
-//        String pathDiseaseCharactersReport = "tmp/analysis_result/" + diseaseCharactersReport;
-//        FileWriter fileWriterdiseaseCharactersReport = new FileWriter(pathDiseaseCharactersReport);
 
-        String diseaseReferencesReport = timeProvider.getNowFormatyyyyMMdd() + "_wikipedia_diseases_references.csv";
-        String pathDiseaseReferencesReport = "tmp/analysis_result/" + diseaseReferencesReport;
-        FileWriter fileWriterdiseaseReferencesReport = new FileWriter(pathDiseaseReferencesReport);
+        String filename = "";
+        String directoryName = "tmp/analysis_result/";
+        if (character) filename = timeProvider.getNowFormatyyyyMMdd() + "_wikipedia_diseases_characters.csv";
+        if (references) {
+            directoryName = "tmp/wiki_references/";
+            filename = timeProvider.getNowFormatyyyyMMdd() + "_wikipedia_diseases_references.csv";
+        }
+        if (pubmedRef){
+            directoryName = "tmp/wiki_referencesPMID/";
+            filename = timeProvider.getNowFormatyyyyMMdd() + "_wikipedia_diseases_PMID_references.csv";
+        }
+        if (medicalTerms) filename = timeProvider.getNowFormatyyyyMMdd() + "_wikipedia_diseases_medical_term.csv";
+        if (authors){
+            directoryName = "tmp/wiki_authors/";
+            filename = timeProvider.getNowFormatyyyyMMdd() + "_wikipedia_diseases_authors.csv";
+        }
+        if (allWikiRevision){
+            directoryName = "tmp/wiki_revisions";
+            filename = timeProvider.getNowFormatyyyyMMdd() + "_wikipedia_diseases_revision_list.csv";
+        }
 
-//        String diseaseMedicalTermsReport = timeProvider.getNowFormatyyyyMMdd() + "_wikipedia_diseases_medical_term.csv";
-//        String pathDiseaseMedicalTermsReport = "tmp/analysis_result/" + diseaseMedicalTermsReport;
-//        FileWriter fileWriterdiseaseMedicalTermsReport = new FileWriter(pathDiseaseMedicalTermsReport);
+        String path = directoryName + filename;
+        FileWriter fileWriter = new FileWriter(path);
 
         int count = 0;
         if (directoryListing != null) {
@@ -970,88 +1533,276 @@ public class WikipediaApiService {
 
                     try {
                         Disease jsonFileDisease = common.readDiseaseJSONFileAnalysis(diseaseFile);
-                        if (isDiseaseWithRefError(jsonFileDisease, diseasesErrorReferences)) {
+//                        if (isDiseaseWithRefError(jsonFileDisease, diseasesErrorReferences)) {//Para las enfermedades con errores en las referencias
                             if (!jsonFileDisease.isScorn()) {
                                 count++;
-                                logger.info(count + " to " + total + ". (" + jsonFileDisease.isScorn() + ") " + jsonFileDisease.getId() + " - " + jsonFileDisease.getName() + ": Num Snapshots: " + jsonFileDisease.getSnapshots().size());
+                                logger.info(count + " to " + total + ". (" + jsonFileDisease.isScorn() + ") " + jsonFileDisease.getId() + " - " + jsonFileDisease.getName() + ": Num Snapshots: " + jsonFileDisease.getSnapshots().size() + " URL: https://en.wikipedia.org/w/index.php?title=" + jsonFileDisease.getName());
 
-                                if (count == 1) {
-                                    int snapCount = 0;
+                                if(character || references || medicalTerms || pubmedRef) {
+                                    //<editor-fold desc="header">
+                                    if (count == 1) {
+                                        int snapCount = 0;
+                                        for (String trueSnapshot : Constants.ANALYSIS_SNAPSHOT_LIST) {
+                                            snapCount++;
+                                            head = head + Constants.COMMA + snapCount + "_" + trueSnapshot;
+                                        }
+                                        fileWriter.write(head + "\n");
+                                    }
+                                    //</editor-fold>
+                                    List<Object[]> snapshotsDKE = null;
+                                    if (medicalTerms)
+                                        snapshotsDKE = documentService.getDiseaseDKEInfoToAnalysis(jsonFileDisease.getId());
+
+                                    String csvString = "";
+                                    int snapshotCount = 0;
                                     for (String trueSnapshot : Constants.ANALYSIS_SNAPSHOT_LIST) {
-                                        snapCount++;
-                                        head = head + Constants.COMMA + snapCount + "_" + trueSnapshot;
-                                    }
-//                                fileWriterdiseaseCharactersReport.write(head + "\n");
-                                    fileWriterdiseaseReferencesReport.write(head + "\n");
-//                                fileWriterdiseaseMedicalTermsReport.write(head + "\n");
-                                }
-
-                                List<Object[]> snapshotsDKE = null;
-                                if (medicalTerms)
-                                    snapshotsDKE = documentService.getDiseaseDKEInfoToAnalysis(jsonFileDisease.getId());
-
-                                String csvString = "";
-                                int snapshotCount = 0;
-                                for (String trueSnapshot : Constants.ANALYSIS_SNAPSHOT_LIST) {
-
-                                    snapshotCount++;
-
-                                    if (medicalTerms) {
-                                        if (snapshotCount == 1) {
-                                            csvString = csvString + getMedicalTermCountBySnapshotInfo(snapshotsDKE, trueSnapshot);
-                                        } else {
-                                            csvString = csvString + Constants.COMMA + getMedicalTermCountBySnapshotInfo(snapshotsDKE, trueSnapshot);
-                                        }
-                                    } else {
-                                        Snapshot snapshot = findSnapshot(trueSnapshot, jsonFileDisease.getSnapshots());
-                                        if (snapshot != null) {
-                                            Revision revision = getRevisionBySnapshot(jsonFileDisease.getPage().getRevisions(), snapshot.getRevId());
-                                            if (references) {
-                                                List<Reference> referenceList = extracReferences(revision.getText());
-                                                revision.setReferenceCount(referenceList.size());
-                                            }
+                                        snapshotCount++;
+                                        //<editor-fold desc="medicalTerms">
+                                        if (medicalTerms) {
                                             if (snapshotCount == 1) {
-                                                if (character) csvString = csvString + revision.getCharacterCount();
-                                                if (references) csvString = csvString + revision.getReferenceCount();
+                                                csvString = csvString + getMedicalTermCountBySnapshotInfo(snapshotsDKE, trueSnapshot);
                                             } else {
-                                                if (character)
-                                                    csvString = csvString + Constants.COMMA + revision.getCharacterCount();
-                                                if (references)
-                                                    csvString = csvString + Constants.COMMA + revision.getReferenceCount();
-                                            }
-                                        } else {
-                                            if (snapshotCount == 1) {
-                                                csvString = csvString + 0;
-                                            } else {
-                                                csvString = csvString + Constants.COMMA + 0;
+                                                csvString = csvString + Constants.COMMA + getMedicalTermCountBySnapshotInfo(snapshotsDKE, trueSnapshot);
                                             }
                                         }
+                                        //</editor-fold>
+                                        else {
+                                            Snapshot snapshot = findSnapshot(trueSnapshot, jsonFileDisease.getSnapshots());
+                                            if (snapshot != null) {
+                                                Revision revision = getRevisionBySnapshot(jsonFileDisease.getPage().getRevisions(), snapshot.getRevId());
+                                                //<editor-fold desc="medicalTerms">
+                                                if (references) {
+                                                    if (pubmedRef) {
+//                                                        int pubmedRefCount = extracPubMedReferences(revision.getText());
+//                                                        revision.setReferenceCount(pubmedRefCount);
+//                                                        if (snapshotCount == 1) {
+//                                                            System.out.println(revision.toString());
+                                                            int pubmedRefCount = extracReferencesPubMedBetter(revision.getText());
+//                                                        System.out.println("pubmedRefCount: " + pubmedRefCount);
+//                                                        if (snapshotCount == 1) System.out.println(revision.getText());
+                                                            revision.setReferenceCount(pubmedRefCount);
+//                                                        }
+                                                    } else {
+                                                        List<Reference> referenceList = extracReferences(revision.getText());
+                                                        revision.setReferenceCount(referenceList.size());
+                                                    }
+                                                }
+                                                //</editor-fold>
+                                                //<editor-fold desc="character&references">
+                                                if (snapshotCount == 1) {
+                                                    if (character) csvString = csvString + revision.getCharacterCount();
+                                                    if (references)
+                                                        csvString = csvString + revision.getReferenceCount();
+                                                } else {
+                                                    if (character)
+                                                        csvString = csvString + Constants.COMMA + revision.getCharacterCount();
+                                                    if (references)
+                                                        csvString = csvString + Constants.COMMA + revision.getReferenceCount();
+                                                }
+                                                //</editor-fold>
+                                            } else {
+                                                if (snapshotCount == 1) {
+                                                    csvString = csvString + 0;
+                                                } else {
+                                                    csvString = csvString + Constants.COMMA + 0;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    String row = jsonFileDisease.getId() + Constants.COMMA + Constants.QUOTATION_MARKS + jsonFileDisease.getName() + Constants.QUOTATION_MARKS + Constants.COMMA + csvString;
+                                    System.out.println(row);
+                                    fileWriter.write(row + "\n");
+                                }
+
+                                if (authors) {
+                                    Snapshot firstSnapshot = jsonFileDisease.getSnapshots().get(0);
+                                    Snapshot lastSnapshot = jsonFileDisease.getSnapshots().get(jsonFileDisease.getSnapshots().size() - 1);
+//                                    System.out.println("Page => " + page);
+                                    //<editor-fold desc="header">
+                                    if (count == 1) {
+//                                        int snapCount = 0;
+//                                        for (String trueSnapshot : Constants.ANALYSIS_SNAPSHOT_LIST) {
+//                                            snapCount++;
+//                                            head = head + Constants.COMMA + trueSnapshot;
+//                                        }
+                                        head = head + Constants.COMMA + "author_count";
+                                        fileWriter.write(head + "\n");
+                                    }
+                                    //</editor-fold>
+//                                    Page page = getPageWithUserSnapshotBetweenTwoRevisionsId(jsonFileDisease, fileWriter);
+                                    Page page = getPageWithUserSnapshotBetweenTwoRevisionsId2(jsonFileDisease, firstSnapshot, lastSnapshot, fileWriter);
+                                }
+                                if (allWikiRevision){
+//                                    System.out.println("ENTRAAAA => allWikiRevision");
+                                    Snapshot firstSnapshot = jsonFileDisease.getSnapshots().get(0);
+                                    Snapshot lastSnapshot = jsonFileDisease.getSnapshots().get(jsonFileDisease.getSnapshots().size() - 1);
+
+                                    Page page = getPageWithRevisionListBetweenTwoRevisionsId(jsonFileDisease, firstSnapshot, lastSnapshot);
+//                                    System.out.println("Page => " + page);
+                                    System.out.println("Number of revision: " + page.getRevisions().size());
+
+                                    //<editor-fold desc="header">
+                                    if (count == 1) {
+                                        head = head + Constants.COMMA + "revision_count";
+                                        fileWriter.write(head + "\n");
                                     }
 
+                                        String row = jsonFileDisease.getId() + Constants.COMMA + Constants.QUOTATION_MARKS + jsonFileDisease.getName() + Constants.QUOTATION_MARKS + Constants.COMMA + page.getRevisions().size();
+                                        fileWriter.write(row + "\n");
+
+                                    //</editor-fold>
                                 }
-                                String row = jsonFileDisease.getId() + Constants.COMMA + Constants.QUOTATION_MARKS + jsonFileDisease.getName() + Constants.QUOTATION_MARKS + Constants.COMMA + csvString;
-                                System.out.println(row);
-//                                fileWriterdiseaseCharactersReport.write(row + "\n");
-                                fileWriterdiseaseReferencesReport.write(row + "\n");
-//                            fileWriterdiseaseMedicalTermsReport.write(row + "\n");
 
                             } else {
 //                            String noRelevantSQL = "UPDATE new_tbl_disease_list SET relevant = 0 WHERE disease_id = '" + jsonFileDisease.getId() + "';";
 //                            System.out.println(noRelevantSQL);
                             }
-                        }
+//                        }//para las enfermedades con errores en las referencias
                     }//END try
                     catch (Exception exception) {
-                        logger.error("File " + diseaseFile.getAbsolutePath() + " is not OLE");
+                        logger.error("File " + diseaseFile.getAbsolutePath() + " is not OLE ", exception);
                     }//END catch
                 }
             }//END for (File file : directoryListing) {
         }//END if (directoryListing != null) {
-//        fileWriterdiseaseCharactersReport.close();
-        fileWriterdiseaseReferencesReport.close();
-//        fileWriterdiseaseMedicalTermsReport.close();
+        fileWriter.close();
 
         System.out.println("True number of diseases: " + count);
+    }
+
+
+    public void getSentencesCountByJSONDisease() throws IOException {
+        Common common = new Common();
+        TimeProvider timeProvider = new TimeProvider();
+        File dir = new File(Constants.ANALYSIS_HISTORY_DIRECTORY/*"tmp/test/"*/);
+        File[] directoryListing = dir.listFiles();
+
+        Integer currentRevId = 0;
+        Integer previousRevId = 0;
+
+        String filename = "";
+        String directoryName = "tmp/wiki_sentences/";
+        filename = timeProvider.getNowFormatyyyyMMdd() + "_wikipedia_diseases_sentences_list.csv";
+        String path = directoryName + filename;
+        FileWriter fileWriter = new FileWriter(path);
+
+
+        int count = 0;
+        if (directoryListing != null) {
+            int total = directoryListing.length - 1;
+            System.out.println("total: " + total);
+            String head = "disease_id,disease_name";
+            for (File diseaseFile : directoryListing) {
+                if (!diseaseFile.getName().equalsIgnoreCase(".DS_Store")) {
+
+                    try {
+                        Disease jsonFileDisease = common.readDiseaseJSONFileAnalysis(diseaseFile);
+//                        if (isDiseaseWithRefError(jsonFileDisease, diseasesErrorReferences)) {//Para las enfermedades con errores en las referencias
+                        if (!jsonFileDisease.isScorn()) {
+                            count++;
+                            logger.info(count + " to " + total + ". (" + jsonFileDisease.isScorn() + ") " + jsonFileDisease.getId() + " - " + jsonFileDisease.getName() + ": Num Snapshots: " + jsonFileDisease.getSnapshots().size() + " URL: https://en.wikipedia.org/w/index.php?title=" + jsonFileDisease.getName());
+                            //<editor-fold desc="header">
+                            if (count == 1) {
+                                int snapCount = 0;
+                                for (String trueSnapshot : Constants.ANALYSIS_SNAPSHOT_LIST) {
+                                    snapCount++;
+                                    head = head + Constants.COMMA + snapCount + "_" + trueSnapshot;
+                                }
+                                fileWriter.write(head + "\n");
+                            }
+                            //</editor-fold>
+
+                            String csvString = "";
+                            int snapshotCount = 0;
+                            for (String trueSnapshot : Constants.ANALYSIS_SNAPSHOT_LIST) {
+                                snapshotCount++;
+                                Snapshot snapshot = findSnapshot(trueSnapshot, jsonFileDisease.getSnapshots());
+                                if (snapshot != null) {
+                                    Revision revision = getRevisionBySnapshot(jsonFileDisease.getPage().getRevisions(), snapshot.getRevId());
+                                    currentRevId = revision.getRevid();
+//                                    System.out.println("    revision.getRevid(): " + revision.getRevid());
+                                    if (!(currentRevId==previousRevId)){
+//                                        System.out.println("        Hacer");
+                                        getSentenceCountFromAllRevisionTexts(revision);
+                                    }
+//                                    else {
+//                                        System.out.println("        TEST: " + revision.getSentenceCount());
+//                                    }
+                                    if (snapshotCount == 1) {
+                                        csvString = csvString + revision.getSentenceCount();
+                                    }else{
+                                        csvString = csvString + Constants.COMMA + revision.getSentenceCount();
+                                    }
+
+                                    previousRevId = currentRevId;
+                                }
+                            }
+                            String row = jsonFileDisease.getId() + Constants.COMMA + Constants.QUOTATION_MARKS + jsonFileDisease.getName() + Constants.QUOTATION_MARKS + Constants.COMMA + csvString;
+                            System.out.println(row);
+                            fileWriter.write(row + "\n");
+
+                        }
+                    } catch (Exception exception) {
+                        logger.error("File " + diseaseFile.getAbsolutePath() + " is not OLE ", exception);
+                    }
+                }
+            }//END for (File file : directoryListing) {
+        }//END if (directoryListing != null) {
+        fileWriter.close();
+        System.out.println("True number of diseases: " + count);
+    }
+
+
+    public void getSentenceCountFromAllRevisionTexts(Revision revision){
+        Common common = new Common();
+        Integer sentenceCount = 0;
+
+        if (!common.isEmpty(revision.getText())) {
+            List<String> textList = getAllTextsFromARevision(revision.getText());
+            for (String text: textList) {
+//                System.out.println("TEXT: " + text);
+                List<List<HasWord>> sentenceList = getSentencesFromText(text, false, "");
+//                for (List<HasWord> words: sentenceList) {
+//                    System.out.println("Sentence: ");
+//                    for (HasWord hasWord : words) {
+//                        System.out.println("    Words: " + hasWord.word());
+//                    }
+//                }
+//                System.out.println("Sentences size: " + sentenceList.size());
+                sentenceCount = sentenceCount + sentenceList.size();
+            }
+        }
+        revision.setSentenceCount(sentenceCount);
+    }
+
+
+    public List<List<HasWord>> getSentencesFromText(String str, boolean invertible, String options){
+        List<List<HasWord>> sentences = new ArrayList<List<HasWord>>();
+        StringReader reader = new StringReader(str);
+        DocumentPreprocessor dp = new DocumentPreprocessor(reader);
+        TokenizerFactory factory = null;
+
+        if( invertible ) {
+            factory = PTBTokenizer.factory(true, true);
+            if( options != null && options.length() > 0 )
+                options = "invertible=true, " + options;
+            else
+                options = "invertible=true";
+        } else {
+            factory = PTBTokenizer.factory();
+        }
+
+        //    System.out.println("Setting splitter options=" + options);
+        factory.setOptions(options);
+        dp.setTokenizerFactory(factory);
+
+        Iterator<List<HasWord>> iter = dp.iterator();
+        while( iter.hasNext() ) {
+            List<HasWord> sentence = iter.next();
+            sentences.add(sentence);
+        }
+        return sentences;
+
     }
 
 
@@ -1085,6 +1836,14 @@ public class WikipediaApiService {
                 .filter(p -> p.getSnapshot().equals(findSnapshot))
                 .findFirst();
         return snapshot.isPresent() ? snapshot.get() : null;
+    }
+
+
+    public boolean isRevIdInASnapshotList(List<Snapshot> snapshots, Integer revisionId){
+        Optional<Snapshot> snapshot = snapshots.stream()
+                .filter(p -> p.getRevId().equals(revisionId))
+                .findFirst();
+        return snapshot != null;
     }
 
 
@@ -1206,30 +1965,75 @@ public class WikipediaApiService {
                 referenceList.add(createReference(liElement, refCount, false));
                 refCount++;
             }
+            //VERIFICAR SI HAY MAS REFERENCIAS CON DIFERENTE ESTILO
+//            System.out.println("VERIFICATION: " + verifyIfExistMoreReferences(webDocument, referenceList));
+            verifyIfExistMoreReferences(webDocument, referenceList);
+
         }else {
 //            System.out.println(webDocument.getElementById("References").nextElementSibling().toString());
             referenceElements = null;
             try {
                 referenceElements = webDocument.getElementById("References").parent().nextElementSibling().select(Constants.HTML_LI);
                         if (referenceElements != null) {
-                            int refCount = 1;
-                            for (Element liElement : referenceElements) {
+                            if (referenceElements.size() > 0) {
+                                int refCount = 1;
+                                for (Element liElement : referenceElements) {
 //                System.out.println(liElement.toString());
-                                referenceList.add(createReference(liElement, refCount, false));
-                                refCount++;
+                                    referenceList.add(createReference(liElement, refCount, false));
+                                    refCount++;
+                                }
+                            }else{
+//                        System.out.println("ENTRA_1_B");
+                                //RECORRER con WHILE elementos despues del <h2>References hasta el siguiente <h2>
+                                Element element = webDocument.getElementById("References").parent();
+//                        System.out.println("element.text(): " + element.text());
+                                Element nextElementBro = element.nextElementSibling();
+//                        System.out.println("nextElementBro.text(): " + nextElementBro.toString());
+                                int refCount = 0;
+                                while (nextElementBro != null) {
+                                    if (nextElementBro.tagName().equalsIgnoreCase("ul")) {
+//                                                System.out.println("ENTRA_UL");
+//                                                System.out.println("toString(): " + nextElementBro.toString());
+                                        Elements linkElements = nextElementBro.select(Constants.HTML_LI);
+                                        if (linkElements.size() > 0) {
+                                            for (Element liElement : linkElements) {
+                                                referenceList.add(createReference(liElement, refCount, false));
+                                                refCount++;
+                                            }
+                                        }
+                                        break;
+                                    }else if (nextElementBro.tagName().equalsIgnoreCase("p")){
+//                                System.out.println("ENTRA_P");
+//                System.out.println("toString(): " + nextElementBro.toString());
+                                        refCount++;
+                                        referenceList.add(createReference(nextElementBro, refCount, false));
+                                    }
+                                    // Obtiene el siguiente hermano del nodo para seguir con el ciclo while
+                                    nextElementBro = nextElementBro.nextElementSibling();
+                                }
                             }
                         }
+
                 }catch (Exception e){
                 logger.error("Error to retrieval the reference info by the second method ");
             }
             if (referenceElements==null) {
+//                System.out.println("ENTRA SOURCE");
                 try {
                     Element element = webDocument.getElementById("Sources").parent();
                     Element nextElementBro = element.nextElementSibling();
-                    int count = 0;
-                    while (nextElementBro != null && nextElementBro.tagName().equalsIgnoreCase("p")) {
-                        count++;
-                        referenceList.add(createReference(nextElementBro, count, true));
+                    int refCount = 0;
+                    while (nextElementBro != null) {
+                        if (nextElementBro.tagName().equalsIgnoreCase("ul")) {
+                            Elements linkElements = nextElementBro.select(Constants.HTML_LI);
+                            if (linkElements.size() > 0) {
+                                for (Element liElement : linkElements) {
+                                    referenceList.add(createReference(liElement, refCount, false));
+                                    refCount++;
+                                }
+                            }
+                            break;
+                        }
                         // Obtiene el siguiente hermano del nodo para seguir con el ciclo while
                         nextElementBro = nextElementBro.nextElementSibling();
                     }
@@ -1241,6 +2045,258 @@ public class WikipediaApiService {
 
         return referenceList;
 
+    }
+
+
+    public int extracReferencesPubMedBetter(String htmlText){
+        org.jsoup.nodes.Document webDocument = Jsoup.parse(htmlText);
+
+        List<Integer> referenceList = new ArrayList<>();
+        int refCount = 0;
+        //En busca de las referencias
+        Elements referenceElements = webDocument.getElementsByClass("references").select(Constants.HTML_LI); // .select("");
+//        System.out.println("SIZE: "+referenceElements.size());
+//        System.out.println(referenceElements.text());
+        if (referenceElements.size()>0) {
+            refCount = 0;
+            for (Element liElement : referenceElements) {
+//                System.out.println("TEXT: " + liElement.text());
+//                System.out.println("toString(): " + liElement.text());
+                if (liElement.text().trim().toLowerCase().contains("pmid"/*Constants.SOURCE_PUBMED*/)) {
+//                            System.out.println("URL: " + absHref + " ==> " + liElement.text());
+//                    System.out.println("URL: " + absHref + " ==> " + linkElement.text());
+                    refCount = refCount + 1;
+                }
+
+
+//                Elements linkElements = liElement.select(Constants.HTML_A);
+//                if (linkElements.size()>0) {
+//                    for (Element linkElement : linkElements) {
+//                        String absHref = linkElement.attr("href");
+////                System.out.println("URL: " + absHref + " ==> " + linkElement.text());
+//                        if (linkElement.text().trim().toLowerCase().contains("pmid"/*Constants.SOURCE_PUBMED*/)) {
+////                            System.out.println("URL: " + absHref + " ==> " + liElement.text());
+////                    System.out.println("URL: " + absHref + " ==> " + linkElement.text());
+//                            refCount = refCount + 1;
+//                        }
+//                    }
+//                }
+
+
+
+            }
+            //VERIFICAR SI HAY MAS REFERENCIAS CON DIFERENTE ESTILO
+//            System.out.println("VERIFICATION: " + verifyIfExistMorePubMedReferences(webDocument));
+            int verifyIfExistMorePubMedReferences = verifyIfExistMorePubMedReferences(webDocument);
+            if (verifyIfExistMorePubMedReferences>0){
+//                System.out.println(refCount + " + " + verifyIfExistMorePubMedReferences);
+                refCount = refCount + verifyIfExistMorePubMedReferences;
+            }
+
+//            referenceList.add(refCount);
+//            System.out.println("SIZE: "+referenceElements.size() + " PubMedRefCount: " + refCount);
+//            return refCount;
+        }else {
+//            System.out.println(webDocument.getElementById("References").nextElementSibling().toString());
+            referenceElements = null;
+            try {
+                referenceElements = webDocument.getElementById("References").parent().nextElementSibling().select(Constants.HTML_LI);
+                if (referenceElements != null) {
+//                    System.out.println("ENTRA_1: " + referenceElements.size());
+                    if (referenceElements.size()>0) {
+                            refCount = 0;
+                            for (Element liElement : referenceElements) {
+//                System.out.println("toString(): " + liElement.toString());
+                                Elements linkElements = liElement.select(Constants.HTML_A);
+                                if (linkElements.size() > 0) {
+                                    for (Element linkElement : linkElements) {
+                                        String absHref = linkElement.attr("href");
+//                System.out.println("URL: " + absHref + " ==> " + linkElement.text());
+                                        if (linkElement.text().trim().toLowerCase().contains("pmid"/*Constants.SOURCE_PUBMED*/)) {
+//                    System.out.println("URL: " + absHref + " ==> " + linkElement.text());
+                                            refCount = refCount + 1;
+                                        }
+                                    }
+                                }
+                            }
+//                        referenceList.add(refCount);
+//                        System.out.println("SIZE: "+referenceElements.size() + " PubMedRefCount: " + refCount);
+//                        return refCount;
+                    }else{
+//                        System.out.println("ENTRA_1_B");
+                        //RECORRER con WHILE elementos despues del <h2>References hasta el siguiente <h2>
+                        Element element = webDocument.getElementById("References").parent();
+//                        System.out.println("element.text(): " + element.text());
+                        Element nextElementBro = element.nextElementSibling();
+//                        System.out.println("nextElementBro.text(): " + nextElementBro.toString());
+                        refCount = 0;
+                        while (nextElementBro != null) {
+                            if (nextElementBro.tagName().equalsIgnoreCase("ul")) {
+//                                                System.out.println("ENTRA_UL");
+//                                                System.out.println("toString(): " + nextElementBro.toString());
+                                Elements linkElements = nextElementBro.select(Constants.HTML_A);
+                                if (linkElements.size() > 0) {
+                                    for (Element linkElement : linkElements) {
+                                        String absHref = linkElement.attr("href");
+//                System.out.println("URL: " + absHref + " ==> " + linkElement.text());
+                                        if (linkElement.text().trim().toLowerCase().contains("pmid"/*Constants.SOURCE_PUBMED*/)) {
+//                    System.out.println("URL: " + absHref + " ==> " + linkElement.text());
+                                            refCount = refCount + 1;
+                                        }
+                                    }
+                                }
+                                break;
+                            }else if (nextElementBro.tagName().equalsIgnoreCase("p")){
+//                                System.out.println("ENTRA_P");
+//                System.out.println("toString(): " + nextElementBro.toString());
+//                System.out.println("URL: " + absHref + " ==> " + linkElement.text());
+                                if (nextElementBro.text().trim().toLowerCase().contains("pmid"/*Constants.SOURCE_PUBMED*/)) {
+//                    System.out.println("URL: " + absHref + " ==> " + linkElement.text());
+                                    refCount = refCount + 1;
+                                }
+                            }
+                            // Obtiene el siguiente hermano del nodo para seguir con el ciclo while
+                            nextElementBro = nextElementBro.nextElementSibling();
+                        }
+                    }
+                }
+//                System.out.println("SIZE: "+referenceElements.size() + " PubMedRefCount: " + refCount);
+            }catch (Exception e){
+                logger.error("Error to retrieval the reference info by the second method ");
+            }
+            if (referenceElements==null) {
+//                System.out.println("ENTRA_2");
+                try {
+                    Element element = webDocument.getElementById("Sources").parent();
+                    Element nextElementBro = element.nextElementSibling();
+                    refCount = 0;
+                    while (nextElementBro != null) {
+                        if (nextElementBro.tagName().equalsIgnoreCase("ul")) {
+                            //                System.out.println("toString(): " + liElement.toString());
+                            Elements linkElements = nextElementBro.select(Constants.HTML_A);
+                            if (linkElements.size() > 0) {
+                                for (Element linkElement : linkElements) {
+//                System.out.println("URL: " + absHref + " ==> " + linkElement.text());
+                                    if (linkElement.text().trim().toLowerCase().contains("pmid"/*Constants.SOURCE_PUBMED*/)) {
+//                    System.out.println("URL: " + absHref + " ==> " + linkElement.text());
+                                        refCount = refCount + 1;
+                                    }
+                                }
+                            }
+                        }
+                        // Obtiene el siguiente hermano del nodo para seguir con el ciclo while
+                        nextElementBro = nextElementBro.nextElementSibling();
+                    }
+//                    referenceList.add(refCount);
+//                    System.out.println("SIZE: "+referenceElements.size() + " PubMedRefCount: " + refCount);
+//                    return refCount;
+                }catch (Exception e){
+                    logger.error("Error to retrieval the reference info by the third method ", e);
+                }
+            }
+        }
+        return refCount;
+    }
+
+
+    public int verifyIfExistMorePubMedReferences(org.jsoup.nodes.Document webDocument){
+        int refCount = 0;
+        try {
+            Element element = webDocument.getElementById("References").parent();
+//                        System.out.println("element.text(): " + element.text());
+            Element nextElementBro = element.nextElementSibling();
+//                        System.out.println("nextElementBro.text(): " + nextElementBro.toString());
+            while (nextElementBro != null) {
+//            System.out.println("ENTRA!!!!!!!!!!!!");
+                if (nextElementBro.tagName().equalsIgnoreCase("ul")) {
+//                                                System.out.println("ENTRA_UL");
+//                                                System.out.println("toString(): " + nextElementBro.toString());
+                    Elements linkElements = nextElementBro.select(Constants.HTML_A);
+                    if (linkElements.size() > 0) {
+                        for (Element linkElement : linkElements) {
+                            String absHref = linkElement.attr("href");
+//                System.out.println("URL: " + absHref + " ==> " + linkElement.text());
+                            if (linkElement.text().trim().toLowerCase().contains("pmid"/*Constants.SOURCE_PUBMED*/)) {
+//                    System.out.println("URL: " + absHref + " ==> " + linkElement.text());
+                                refCount = refCount + 1;
+                            }
+                        }
+                    }
+                    break;
+                } else if (nextElementBro.tagName().equalsIgnoreCase("p")) {
+//                System.out.println("ENTRA_P");
+//                System.out.println("toString(): " + nextElementBro.toString());
+//                System.out.println("URL: " + absHref + " ==> " + linkElement.text());
+                    if (nextElementBro.text().trim().toLowerCase().contains("pmid"/*Constants.SOURCE_PUBMED*/)) {
+//                    System.out.println("URL: " + absHref + " ==> " + linkElement.text());
+                        refCount = refCount + 1;
+                    }
+                }
+                // Obtiene el siguiente hermano del nodo para seguir con el ciclo while
+                nextElementBro = nextElementBro.nextElementSibling();
+            }
+        }catch (Exception e){
+            logger.error("No parent verifyIfExistMorePubMedReferences()");
+        }
+//        System.out.println("verifyIfExistMorePubMedReferences: " + refCount);
+        return refCount;
+    }
+
+
+    public int verifyIfExistMoreReferences(org.jsoup.nodes.Document webDocument, List<Reference> referenceList){
+        int refCount = 0;
+        try {
+            Element element = webDocument.getElementById("References").parent();
+//                        System.out.println("element.text(): " + element.text());
+            Element nextElementBro = element.nextElementSibling();
+//                        System.out.println("nextElementBro.text(): " + nextElementBro.toString());
+            while (nextElementBro != null) {
+                if (nextElementBro.tagName().equalsIgnoreCase("ul")) {
+//                                                System.out.println("ENTRA_UL");
+//                                                System.out.println("toString(): " + nextElementBro.toString());
+                    Elements liElements = nextElementBro.select(Constants.HTML_LI);
+                    if (liElements.size() > 0) {
+                        for (Element liElement : liElements) {
+                            referenceList.add(createReference(liElement, refCount, false));
+                            refCount = refCount + 1;
+                        }
+
+                    }
+                    break;
+                } else if (nextElementBro.tagName().equalsIgnoreCase("p")) {
+                    refCount++;
+                    referenceList.add(createReference(nextElementBro, refCount, false));
+                }
+                // Obtiene el siguiente hermano del nodo para seguir con el ciclo while
+                nextElementBro = nextElementBro.nextElementSibling();
+            }
+        }catch (Exception e){
+            logger.error("No parent verifyIfExistMoreReferences()");
+        }
+//        System.out.println("verifyIfExistMoreReferences: " + refCount);
+        return refCount;
+    }
+
+
+    public int extracPubMedReferences(String htmlText){
+        org.jsoup.nodes.Document webDocument = Jsoup.parse(htmlText);
+        int refCount = 0;
+
+        List<Reference> referenceList = new ArrayList<>();
+        //En busca de las referencias
+        Elements linkElements = webDocument.select(Constants.HTML_A); // .select("");
+//        System.out.println("SIZE: "+linkElements.size());
+        if (linkElements.size()>0) {
+            for (Element linkElement : linkElements) {
+                String absHref = linkElement.attr("href");
+//                System.out.println("URL: " + absHref + " ==> " + linkElement.text());
+                if (linkElement.text().trim().toLowerCase().contains("pmid"/*Constants.SOURCE_PUBMED*/)) {
+//                    System.out.println("URL: " + absHref + " ==> " + linkElement.text());
+                    refCount = refCount + 1;
+                }
+            }
+        }
+        return refCount;
     }
 
     public Reference createReference(Element element, int refCount, boolean source){

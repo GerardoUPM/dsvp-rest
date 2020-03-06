@@ -1,9 +1,17 @@
 package edu.ctb.upm.midas.controller;
 
+import edu.ctb.upm.midas.common.util.TimeProvider;
+import edu.ctb.upm.midas.model.jpa.Disease;
+import edu.ctb.upm.midas.scheduling.ExtractionScheduling;
 import edu.ctb.upm.midas.service.WikipediaApiService;
 import edu.ctb.upm.midas.service._extract.MayoClinicExtractService;
 import edu.ctb.upm.midas.service._extract.ReportTest;
 import edu.ctb.upm.midas.service._extract.WikipediaExtractService;
+import edu.ctb.upm.midas.service.jpa.DiseaseService;
+import edu.ctb.upm.midas.service.jpa.SourceService;
+import edu.stanford.nlp.ling.Document;
+import edu.stanford.nlp.ling.HasWord;
+import edu.stanford.nlp.process.DocumentProcessor;
 import org.hibernate.validator.constraints.NotBlank;
 import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +22,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
+import java.io.IOException;
+import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by gerardo on 05/07/2017.
@@ -37,6 +49,9 @@ public class ExtractionController {
     private ReportTest reportTest;
     @Autowired
     private WikipediaApiService wikipediaApiService;
+    @Autowired
+    private ExtractionScheduling extractionScheduling;
+
 
     @RequestMapping(path = { "${my.service.rest.request.mapping.wikipedia.retrieval.texts.path}" }, //_wikipedia extraction
             method = RequestMethod.GET,
@@ -83,6 +98,12 @@ public class ExtractionController {
         reportTest.getDiseaseCodesInfo();
     }
 
+    @RequestMapping(path = { "/execute/scheduling" }, //wikipedia extraction
+            method = RequestMethod.GET)
+    public void executeScheduleMethod() throws Exception {
+        extractionScheduling.wikipediaExtraction();
+    }
+
     @RequestMapping(path = { "/test" }, //wikipedia extraction
             method = RequestMethod.GET)
     public void test() throws Exception {
@@ -93,9 +114,34 @@ public class ExtractionController {
 //        wikipediaApiService.staticTest();
 //        wikipediaApiService.getDiseasesInfoAndPopulateTheDBProcedure_REFERENCES();
 //        wikipediaApiService.initCompleteSnapshots();
-        wikipediaApiService.analysisAboutToTheJSONDiseases(false, true, false);
 //        wikipediaApiService.analysisAboutToTheJSONDiseases(false, true, false);
+//        wikipediaApiService.analysisAboutToTheJSONDiseases(false, true, false);
+
+        //OK
+//        wikipediaApiService.analysisAboutToTheJSONDiseases(false, true, false, true, false, false);
+
+        //<editor-fold desc="getSentenceListTEST">
+//        List<List<HasWord>> sentenceList = wikipediaApiService.getSentencesFromText("When cancer begins, it produces no symptoms. Signs and symptoms appear as the mass grows or ulcerates. The findings that result depend on the cancer's type and location. Few symptoms are specific. Many frequently occur in individuals who have other conditions. Cancer can be difficult to diagnose and can be considered a \"great imitator.\"[28]\n" +
+//                "\n" +
+//                "People may become anxious or depressed post-diagnosis. The risk of suicide in people with cancer is approximately double.[29]", false, "");
+//
+//        System.out.println("Number of sentences look: " + sentenceList.size());
+//        for (List<HasWord> words: sentenceList) {
+//            System.out.println("Sentence: ");
+//            for (HasWord hasWord: words) {
+//                System.out.println("    Words: " + hasWord.word());
+//            }
+//        }
+        //</editor-fold>
+
+
+        wikipediaApiService.getSentencesCountByJSONDisease();
+
     }
 
-
+    @RequestMapping(path = { "/test_export" }, //wikipedia extraction
+            method = RequestMethod.GET)
+    public void testExport() throws ParseException, IOException {
+        wikipediaExtractService.testExport();
+    }
 }

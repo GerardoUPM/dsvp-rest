@@ -88,13 +88,13 @@ public class Page {
 
     @Override
     public String toString() {
-        return "Page{" +
-                "pageid=" + pageid +
-                ", title='" + title + '\'' +
-                ", revisions=" + revisions +
-                ", isredirect=" + isredirect +
-                ", redirectpageid=" + redirectpageid +
-                ", redirectpagetitle='" + redirectpagetitle + '\'' +
+        return "\nPage{" +
+                "\npageid=" + pageid +
+                "\n, title='" + title + '\'' +
+                "\n, revisions=" + revisions +
+                "\n, isredirect=" + isredirect +
+                "\n, redirectpageid=" + redirectpageid +
+                "\n, redirectpagetitle='" + redirectpagetitle + '\'' +
                 '}';
     }
 }

@@ -60,7 +60,7 @@ public class SourceServiceImpl implements SourceService {
         return daoSource.findLastSourceIdQuery();
     }
 
-    @Override
+    @Transactional(propagation= Propagation.REQUIRED,readOnly=true)
     public List<Date> findAllSnapshotBySourceNative(String source) {
         return daoSource.findAllSnapshotBySourceNative( source );
     }

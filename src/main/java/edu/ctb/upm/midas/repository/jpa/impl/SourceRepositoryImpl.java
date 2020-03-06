@@ -115,8 +115,9 @@ public class SourceRepositoryImpl extends AbstractDao<String, Source> implements
                 .setParameter("name", source)
                 //.setMaxResults(100)
                 .getResultList();
-        if (CollectionUtils.isNotEmpty(snapshotList))
+        if (CollectionUtils.isNotEmpty(snapshotList)) {
             snapshots = snapshotList;
+        }
         return snapshots;
     }
 

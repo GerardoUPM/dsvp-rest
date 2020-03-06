@@ -44,6 +44,8 @@ public interface DiseaseService {
 
     Disease findBySourceAndVersionAndCodeAndDiseaseName(String sourceName, Date version, String code, String resourceName, String diseaseName);
 
+    List<Object[]> findAllWithTheirDISNETTermsBySourceAndSnapshotAndValidated(String sourceName, Date snapshot, boolean validated);
+
     void save(Disease disease);
 
     int insertNative(String diseaseId, String name, String cui);

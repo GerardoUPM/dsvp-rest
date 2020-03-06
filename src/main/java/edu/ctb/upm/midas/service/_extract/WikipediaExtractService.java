@@ -25,10 +25,13 @@ import edu.ctb.upm.midas.model.extraction.wikipedia.disease_list.request.Request
 import edu.ctb.upm.midas.model.extraction.wikipedia.disease_list.request.RequestFather;
 import edu.ctb.upm.midas.model.extraction.wikipedia.disease_list.request.RequestGDLL;
 import edu.ctb.upm.midas.model.extraction.wikipedia.disease_list.response.*;
-import edu.ctb.upm.midas.model.extraction.wikipedia.disease_list.response.Disease;
 import edu.ctb.upm.midas.model.extraction.wikipedia.texts_extraction.request.Request;
-import edu.ctb.upm.midas.model.jpa.*;
+import edu.ctb.upm.midas.model.jpa.Document;
+import edu.ctb.upm.midas.model.jpa.DocumentUrl;
+import edu.ctb.upm.midas.model.jpa.HasDisease;
+import edu.ctb.upm.midas.model.jpa.Url;
 import edu.ctb.upm.midas.service._populate.WikipediaPopulateDbNative;
+import edu.ctb.upm.midas.service.jpa.DiseaseService;
 import edu.ctb.upm.midas.service.jpa.DocumentService;
 import edu.ctb.upm.midas.service.jpa.SourceService;
 import edu.ctb.upm.midas.service.jpa.TextService;
@@ -89,6 +92,8 @@ public class WikipediaExtractService {
     private TextService textService;
     @Autowired
     private SourceService sourceService;
+    @Autowired
+    private DiseaseService diseaseService;
 
 
     /**
@@ -108,7 +113,7 @@ public class WikipediaExtractService {
         System.out.println("snapshot="+timeProvider.dateFormatyyyyMMdd(version)+", json="+json);
 
         if (dBpediaResponse!=null) {
-            resourceHashMap = retrieveResources(dBpediaResponse.getLinks(), timeProvider.dateFormatyyyyMMdd(version), json);
+//            resourceHashMap = retrieveResources(dBpediaResponse.getLinks(), timeProvider.dateFormatyyyyMMdd(version), json);
             sources = retrieveTexts(dBpediaResponse.getLinks(), timeProvider.dateFormatyyyyMMdd(version), json);
 
             /*if (resourceHashMap!=null) {
@@ -118,12 +123,12 @@ public class WikipediaExtractService {
                 printReport(sources);
             }*/
             if (!onlyTextRetrieval) {//si es true no pobla la base de datos
-                if (sources != null && resourceHashMap != null) {
+                if (sources != null /*&& resourceHashMap != null*/) {
                     //Proceso que elimina aquellos documentos que durante el proceso de recuperación de
                     // datos de wikipedia no se encontraron códigos, ni secciones con textos
                     removeInvalidDocumentsProcedure(sources);
                     //System.out.println("No poblara...");
-                    wikipediaPopulateDbNative.populateResource(resourceHashMap);
+//                    wikipediaPopulateDbNative.populateResource(resourceHashMap);
                     wikipediaPopulateDbNative.populateSemanticTypes();
                     wikipediaPopulateDbNative.populate(sources, version, json, fix);
                     //Insertar la configuración por la que se esta creando la lista
@@ -280,13 +285,13 @@ public class WikipediaExtractService {
      * @return
      * @throws InterruptedException
      */
-    public DBpediaResponse getDiseaseLinkListFromDBPedia(Date snapshot, boolean json) throws InterruptedException {
+    public DBpediaResponse getDiseaseLinkListFromDBPedia(Date snapshot, boolean specificSnapshot) throws InterruptedException {
         DBpediaResponse dBpediaResponse = null;
 
         //Se obtiene el identificador de lista de enfermedades recuperadas desde DBpedia "Album de enfermedades"
         Album album = null;
         while(true){
-            if (json){
+            if (specificSnapshot){
                 album = getSpecifictAlbum(timeProvider.dateFormatyyyyMMdd(snapshot));
                 System.out.println("Specific disease album - snapshot: " + snapshot);
             } else {
@@ -640,6 +645,61 @@ public class WikipediaExtractService {
             }
         }
         */
+    }
+
+    public void testExport() throws IOException {
+        System.out.println("INICIA... ");
+        edu.ctb.upm.midas.model.jpa.Source source = sourceService.findByName("wikipedia");
+
+        if (source!=null){
+            String filename = "";
+            String directoryName = "tmp/wiki_symps/";
+
+            List<Date> snapshots = sourceService.findAllSnapshotBySourceNative(source.getName());
+//            String snapshot = "";
+            String diseaseId = "";
+            String diseaseName = "";
+            String cui = "";
+            String disnetConceptName = "";
+            String semanticType = "";
+            String validated = "";
+            List<Object[]> objectDiseases = null;
+            System.out.println(snapshots.size());
+
+
+            //<editor-fold desc="loop">
+            for (Date snapshot : snapshots) {
+
+                filename = snapshot + "_wikipedia_diseases_symps.csv";
+                String path = directoryName + filename;
+                FileWriter fileWriter = new FileWriter(path);
+
+                objectDiseases = diseaseService.findAllWithTheirDISNETTermsBySourceAndSnapshotAndValidated(source.getName(), snapshot, true);
+
+                String head = "snapshot, disease_id, diseaseName, cui, disnetConceptName, semanticType, validated";
+                fileWriter.write(head + "\n");
+                if (objectDiseases!=null){
+                    for (Object[] o: objectDiseases) {
+//                        snapshot = timeProvider.sqlDateFormatyyyyMMdd((java.sql.Date) o[0]);
+                        diseaseId = ((String) o[1]);
+                        diseaseName = ((String) o[2]);
+                        cui = ((String) o[3]);
+                        disnetConceptName = ((String) o[4]);
+                        semanticType = ((String) o[5]);
+                        validated = ((String) o[6]);
+                        String row = timeProvider.dateFormatyyyyMMdd(timeProvider.convertUtilDateToSQLDate(snapshot)) + "," + diseaseId + ",\"" + diseaseName + "\"," + cui + ",\"" +disnetConceptName + "\",\"" + semanticType + "\",\"" + validated + "\"";
+                        fileWriter.write(row + "\n");
+//                        System.out.println(timeProvider.dateFormatyyyyMMdd(timeProvider.convertUtilDateToSQLDate(snapshot)) + "," + diseaseId + ",\"" + diseaseName + "\"," + cui + ",\"" +disnetConceptName + "\",\"" + semanticType + "\"");
+                    }
+                }
+                fileWriter.close();
+                System.out.println("CSV creado: " + filename);
+            }
+            //</editor-fold>
+        }
+
+
+
     }
 
 }

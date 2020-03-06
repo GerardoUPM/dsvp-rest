@@ -176,6 +176,13 @@ public class DiseaseServiceImpl implements DiseaseService {
         return disease;
     }
 
+    @Override
+    @Transactional(propagation= Propagation.REQUIRED,readOnly=true)
+    public List<Object[]> findAllWithTheirDISNETTermsBySourceAndSnapshotAndValidated(String sourceName, Date snapshot, boolean validated) {
+        List<Object[]> objectDisease = daoDisease.findAllWithTheirDISNETTermsBySourceAndSnapshotAndValidated(sourceName, snapshot, validated);
+        return objectDisease;
+    }
+
     @Transactional(propagation= Propagation.REQUIRED)
     public void save(Disease disease) {
         daoDisease.persist(disease);

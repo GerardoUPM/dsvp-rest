@@ -26,6 +26,8 @@ public class ExtractionScheduling {
 
     @Autowired
     private TimeProvider timeProvider;
+    @Autowired
+    private WikipediaExtractService wikipediaExtractService;
 
     /**
      * Método para extraer una nueva lista de enfermedades desde DBPedia y almacenar en la
@@ -66,7 +68,7 @@ public class ExtractionScheduling {
     @Scheduled(cron = "0 0 4 1 * ?")
     public void wikipediaExtractionEveryFirstDayOfTheMonth() throws Exception {
         try {
-            WikipediaExtractService wikipediaExtractService = new WikipediaExtractService();
+//            WikipediaExtractService wikipediaExtractService = new WikipediaExtractService();
             logger.info("(Wikipedia) Scheduled task for the first of each month at midnight " + timeProvider.getNowFormatyyyyMMdd() + " start.");
             wikipediaExtractService.extract("", false, false, false);
             logger.info("(Wikipedia) Scheduled task for the first of each month at midnight " + timeProvider.getNowFormatyyyyMMdd() + " end.");
@@ -91,7 +93,7 @@ public class ExtractionScheduling {
     @Scheduled(cron = "0 0 4 15 * ?")
     public void wikipediaExtractionEvery15thDayOfTheMonth() {
         try {
-            WikipediaExtractService wikipediaExtractService = new WikipediaExtractService();
+//            WikipediaExtractService wikipediaExtractService = new WikipediaExtractService();
             logger.info("(Wikipedia) Scheduled for the 15th of each month at midnight " + timeProvider.getNowFormatyyyyMMdd() + " start.");
             wikipediaExtractService.extract("", false, false, false);
             logger.info("(Wikipedia) Scheduled for the 15th of each month at midnight " + timeProvider.getNowFormatyyyyMMdd() + " end.");
@@ -101,30 +103,42 @@ public class ExtractionScheduling {
     }
 
 
-    @Scheduled(cron = "0 0 2 1 * ?")
-    public void mayoclinicExtractionEveryFirstDayOfTheMonth() {
-        try {
-            MayoClinicExtractService mayoClinicExtractService = new MayoClinicExtractService();
-            logger.info("(MayoClinic) Scheduled task for the first of each month at midnight " + timeProvider.getNowFormatyyyyMMdd() + " start.");
-            mayoClinicExtractService.extract(timeProvider.getNowFormatyyyyMMdd(), false);
-            logger.info("(MayoClinic) Scheduled task for the first of each month at midnight " + timeProvider.getNowFormatyyyyMMdd() + " end.");
-        }catch (Exception e){
-            logger.error("(MayoClinic) 1stOfTheMonth: " + e.getMessage());
-        }
+    public void wikipediaExtraction() throws Exception {
+//        try {
+//            WikipediaExtractService wikipediaExtractService = new WikipediaExtractService();
+            logger.info("(Wikipedia) force scheduled extraction method " + timeProvider.getNowFormatyyyyMMdd() + " start.");
+            wikipediaExtractService.extract("", false, false, false);
+            logger.info("(Wikipedia) force scheduled extraction method " + timeProvider.getNowFormatyyyyMMdd() + " end.");
+//        }catch (Exception e){
+//            logger.error("(Wikipedia) force methid: " + e.getMessage());
+//        }
     }
 
 
-    @Scheduled(cron = "0 0 2 15 * ?")
-    public void mayoclinicExtractionEvery15thDayOfTheMonth() {
-        try {
-            MayoClinicExtractService mayoClinicExtractService = new MayoClinicExtractService();
-            logger.info("(MayoClinic) Scheduled task for the 15th of each month at midnight " + timeProvider.getNowFormatyyyyMMdd() + " start.");
-            mayoClinicExtractService.extract(timeProvider.getNowFormatyyyyMMdd(), true);
-            logger.info("(MayoClinic) Scheduled task for the 15th of each month at midnight " + timeProvider.getNowFormatyyyyMMdd() + " end.");
-        }catch (Exception e){
-            logger.error("(MayoClinic) 15thOfTheMonth: " + e.getMessage());
-        }
-    }
+//    @Scheduled(cron = "0 0 2 1 * ?")
+//    public void mayoclinicExtractionEveryFirstDayOfTheMonth() {
+//        try {
+//            MayoClinicExtractService mayoClinicExtractService = new MayoClinicExtractService();
+//            logger.info("(MayoClinic) Scheduled task for the first of each month at midnight " + timeProvider.getNowFormatyyyyMMdd() + " start.");
+//            mayoClinicExtractService.extract(timeProvider.getNowFormatyyyyMMdd(), false);
+//            logger.info("(MayoClinic) Scheduled task for the first of each month at midnight " + timeProvider.getNowFormatyyyyMMdd() + " end.");
+//        }catch (Exception e){
+//            logger.error("(MayoClinic) 1stOfTheMonth: " + e.getMessage());
+//        }
+//    }
+//
+//
+//    @Scheduled(cron = "0 0 2 15 * ?")
+//    public void mayoclinicExtractionEvery15thDayOfTheMonth() {
+//        try {
+//            MayoClinicExtractService mayoClinicExtractService = new MayoClinicExtractService();
+//            logger.info("(MayoClinic) Scheduled task for the 15th of each month at midnight " + timeProvider.getNowFormatyyyyMMdd() + " start.");
+//            mayoClinicExtractService.extract(timeProvider.getNowFormatyyyyMMdd(), true);
+//            logger.info("(MayoClinic) Scheduled task for the 15th of each month at midnight " + timeProvider.getNowFormatyyyyMMdd() + " end.");
+//        }catch (Exception e){
+//            logger.error("(MayoClinic) 15thOfTheMonth: " + e.getMessage());
+//        }
+//    }
 
     //TEST
     //@Scheduled(cron = "0 0 10 17 * ?")

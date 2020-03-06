@@ -46,6 +46,8 @@ public interface DiseaseRepository {
 
     Object[] findBySourceAndVersionAndCodeAndDiseaseName(String sourceName, Date version, String code, String resourceName, String diseaseName);
 
+    List<Object[]> findAllWithTheirDISNETTermsBySourceAndSnapshotAndValidated(String sourceName, Date snapshot, boolean validated);
+
     void persist(Disease disease);
 
     int insertNative(String diseaseId, String name, String cui);

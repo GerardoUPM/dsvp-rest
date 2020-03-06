@@ -22,6 +22,7 @@ public class Revision {
     private Long characterCount;//Número de carateres de todos los textos de cada sección
     private String text;
     private Integer referenceCount;
+    private Integer sentenceCount;
 
 
 
@@ -164,6 +165,14 @@ public class Revision {
         this.referenceCount = referenceCount;
     }
 
+    public Integer getSentenceCount() {
+        return sentenceCount;
+    }
+
+    public void setSentenceCount(Integer sentenceCount) {
+        this.sentenceCount = sentenceCount;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -180,20 +189,20 @@ public class Revision {
 
     @Override
     public String toString() {
-        return "Revision{" +
-                "revid=" + revid +
-                ", parentid=" + parentid +
-                ", size=" + size +
-                ", user='" + user + '\'' +
-                ", userid=" + userid +
-                ", timestamp='" + timestamp + '\'' +
-                ", date='" + date + '\'' +
-                ", previousDate='" + previousDate + '\'' +
-                ", comment='" + comment + '\'' +
-                ", minor=" + minor +
-                ", sections='" + sections.size() + '\'' +
-                ", characterCount='" + characterCount + '\'' +
-//                ", text='" + text + '\'' +
+        return "\nRevision{" +
+                "\n revid=" + revid +
+                "\n , parentid=" + parentid +
+                "\n , size=" + size +
+                "\n , user='" + user + '\'' +
+                "\n , userid=" + userid +
+                "\n , timestamp='" + timestamp + '\'' +
+                "\n , date='" + date + '\'' +
+                "\n , previousDate='" + previousDate + '\'' +
+                "\n , comment='" + comment + '\'' +
+                "\n , minor=" + minor +
+//                "\n , sections='" + sections.size() + '\'' +
+//                "\n , characterCount='" + characterCount + '\'' +
+                ", text='" + text + '\'' +
                 '}';
     }
 }
