@@ -30,6 +30,8 @@ public interface HasSemanticTypeRepository {
 
 //    int insertNative(String textId, String cui, boolean validated, String matchedWords, String positionalInfo);
 
+    int insertInBatch(List<HasSemanticType> entityList);
+
     boolean deleteById(HasSemanticTypePK hasSemanticTypePK);
 
     void delete(HasSemanticType hasSemanticType);

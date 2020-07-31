@@ -78,6 +78,14 @@ public class WikipediaExtractService {
     @Autowired
     private DocumentService documentService;
 
+    @Autowired
+    private TextService textService;
+    @Autowired
+    private SourceService sourceService;
+    @Autowired
+    private DiseaseService diseaseService;
+
+
     private String snapshot;
 
     public String getSnapshot() {
@@ -87,13 +95,6 @@ public class WikipediaExtractService {
     public void setSnapshot(String snapshot) {
         this.snapshot = snapshot;
     }
-
-    @Autowired
-    private TextService textService;
-    @Autowired
-    private SourceService sourceService;
-    @Autowired
-    private DiseaseService diseaseService;
 
 
     /**
@@ -238,7 +239,12 @@ public class WikipediaExtractService {
     }
 
 
-    //================ GET DISEASE WEB LINKS FROM DBpedia ====================
+    public boolean hasAssociatedTexts(String source, String snapshot){
+        boolean res = false;
+        return res;
+    }
+
+
     /**
      * @param snapshot
      * @return
@@ -353,7 +359,7 @@ public class WikipediaExtractService {
 
 
     /**
-     * Método que se encarga de marcar como relevante una enfermedad
+     * Método que se encarga de marcar como relevante un artículo de enfermedad
      *
      * Recibe una enfermedad y verifica los parámetros de irrelevancia para
      * calcular la relevancia
@@ -375,7 +381,6 @@ public class WikipediaExtractService {
         if (disease.isTotallyIrrelevant()) isRelevant = false;
         return isRelevant;
     }
-    //================= GET DISEASE WEB LINKS FROM DBpedia =====================
 
 
     /**
@@ -559,6 +564,7 @@ public class WikipediaExtractService {
         }
     }
 
+
     public void test() throws ParseException, IOException {
 //        String sourceName = "wikipedia";
 //        String sourceId = "SO01";
@@ -646,6 +652,7 @@ public class WikipediaExtractService {
         }
         */
     }
+
 
     public void testExport() throws IOException {
         System.out.println("INICIA... ");

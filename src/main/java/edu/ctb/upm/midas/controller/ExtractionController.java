@@ -1,17 +1,10 @@
 package edu.ctb.upm.midas.controller;
 
-import edu.ctb.upm.midas.common.util.TimeProvider;
-import edu.ctb.upm.midas.model.jpa.Disease;
-import edu.ctb.upm.midas.scheduling.ExtractionScheduling;
+import edu.ctb.upm.midas.scheduling.WikipediaExtractionScheduling;
 import edu.ctb.upm.midas.service.WikipediaApiService;
 import edu.ctb.upm.midas.service._extract.MayoClinicExtractService;
 import edu.ctb.upm.midas.service._extract.ReportTest;
 import edu.ctb.upm.midas.service._extract.WikipediaExtractService;
-import edu.ctb.upm.midas.service.jpa.DiseaseService;
-import edu.ctb.upm.midas.service.jpa.SourceService;
-import edu.stanford.nlp.ling.Document;
-import edu.stanford.nlp.ling.HasWord;
-import edu.stanford.nlp.process.DocumentProcessor;
 import org.hibernate.validator.constraints.NotBlank;
 import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,8 +17,6 @@ import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Created by gerardo on 05/07/2017.
@@ -50,12 +41,12 @@ public class ExtractionController {
     @Autowired
     private WikipediaApiService wikipediaApiService;
     @Autowired
-    private ExtractionScheduling extractionScheduling;
+    private WikipediaExtractionScheduling extractionScheduling;
 
 
     @RequestMapping(path = { "${my.service.rest.request.mapping.wikipedia.retrieval.texts.path}" }, //_wikipedia extraction
             method = RequestMethod.GET,
-            params = {"snapshot", "json", "onlyTextRetrieval"})
+            params = {"snapshot", "json", "onlyTextRetrieval", "fix"})
     public String extract(
             @RequestParam(value = "snapshot") @Valid @NotBlank @NotNull @NotEmpty String snapshot
             , @RequestParam(value = "json", required = false, defaultValue = "false") boolean json

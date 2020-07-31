@@ -66,6 +66,11 @@ public class SymptomServiceImpl implements SymptomService {
     }
 
     @Transactional(propagation= Propagation.REQUIRED)
+    public int insertInBatch(List<Symptom> entityList) {
+        return daoSymptom.insertInBatch(entityList);
+    }
+
+    @Transactional(propagation= Propagation.REQUIRED)
     public boolean updateFindFull(Symptom symptom) {
         Symptom sy = daoSymptom.findById(symptom.getCui());
         if(sy!=null){

@@ -59,6 +59,11 @@ public class SemanticTypeServiceImpl implements SemanticTypeService {
     }
 
     @Transactional(propagation= Propagation.REQUIRED)
+    public int insertInBatch(List<SemanticType> entityList) {
+        return daoSemanticType.insertInBatch(entityList);
+    }
+
+    @Transactional(propagation= Propagation.REQUIRED)
     public boolean updateFindFull(SemanticType semanticType) {
         SemanticType st = daoSemanticType.findById(semanticType.getSemanticType());
         if(st!=null){

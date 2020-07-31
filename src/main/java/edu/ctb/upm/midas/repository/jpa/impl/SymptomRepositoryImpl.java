@@ -4,8 +4,12 @@ import edu.ctb.upm.midas.model.jpa.Symptom;
 import edu.ctb.upm.midas.repository.jpa.AbstractDao;
 import edu.ctb.upm.midas.repository.jpa.SymptomRepository;
 import org.apache.commons.collections4.CollectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 
+import javax.persistence.EntityTransaction;
 import java.util.Date;
 import java.util.List;
 
@@ -21,6 +25,12 @@ import java.util.List;
 @Repository("SymptomRepositoryDao")
 public class SymptomRepositoryImpl extends AbstractDao<String, Symptom>
                                     implements SymptomRepository {
+
+    private static final Logger logger = LoggerFactory.getLogger(SymptomRepositoryImpl.class);
+
+
+    @Value("${spring.jpa.properties.hibernate.jdbc.batch_size}")
+    private int batchSize;
 
     public Symptom findById(String cui) {
         Symptom symptom = getByKey(cui);
@@ -124,6 +134,26 @@ public class SymptomRepositoryImpl extends AbstractDao<String, Symptom>
                 .setParameter("cui", cui)
                 .setParameter("name", name)
                 .executeUpdate();
+    }
+
+    @Override
+    public int insertInBatch(List<Symptom> entityList) {
+//        EntityTransaction tx = getEntityManager().getTransaction();
+//        tx.begin();
+        int count = 0;
+        for (Symptom symptom: entityList) {
+            super.persist(symptom);
+            count++;
+            if (count % batchSize == 0) {
+                getEntityManager().flush();
+                getEntityManager().clear();
+//                tx.commit();
+//                tx.begin();
+            }
+        }
+//        tx.commit();
+//        getEntityManager().close();
+        return count;
     }
 
     @Override

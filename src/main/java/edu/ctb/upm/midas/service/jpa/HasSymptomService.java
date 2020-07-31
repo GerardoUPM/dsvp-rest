@@ -24,6 +24,8 @@ public interface HasSymptomService {
 
     int insertNative(String textId, String cui, boolean validated, String matchedWords, String positionalInfo);
 
+    int insertInBatch(List<HasSymptom> entityList);
+
     boolean updateFindFull(HasSymptom hasSymptom, HasSymptomPK hasSymptomPK);
 
     boolean updateFindPartial(HasSymptom hasSymptom, HasSymptomPK hasSymptomPK);

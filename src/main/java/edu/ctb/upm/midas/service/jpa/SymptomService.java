@@ -30,6 +30,8 @@ public interface SymptomService {
 
     int insertNative(String cui, String name);
 
+    int insertInBatch(List<Symptom> entityList);
+
     boolean updateFindFull(Symptom symptom);
 
     boolean updateFindPartial(Symptom symptom);

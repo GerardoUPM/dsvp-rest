@@ -26,6 +26,7 @@ public class Configuration {
     @Size(min = 1, message = Constants.ERR_EMPTY_PARAMETER)
     private String options;
     private boolean concept_location;
+    private int refreshSessionCount;// Valor "0" es para usar el valor por defecto
 
 
     public List<String> getSemanticTypes() {return semanticTypes;}
@@ -56,5 +57,13 @@ public class Configuration {
 
     public void setConcept_location(boolean concept_location) {
         this.concept_location = concept_location;
+    }
+
+    public int getRefreshSessionCount() {
+        return refreshSessionCount;
+    }
+
+    public void setRefreshSessionCount(int refreshSessionCount) {
+        this.refreshSessionCount = refreshSessionCount;
     }
 }

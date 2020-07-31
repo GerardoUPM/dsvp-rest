@@ -61,9 +61,11 @@ public class SectionHelperNative {
     }
 
 
-    public void insert(String name, String description){
+    public String insert(String name, String description){
         String trueSectionId = getLastId();
+        logger.info("Section to insert => " + trueSectionId +" | "+ name +" | "+ description);
         sectionService.insertNative( trueSectionId, name, description );
+        return trueSectionId;
     }
 
 

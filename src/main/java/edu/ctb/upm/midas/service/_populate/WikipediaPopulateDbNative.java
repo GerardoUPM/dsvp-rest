@@ -113,7 +113,7 @@ public class WikipediaPopulateDbNative {
     }
 
 
-    public void insertDocumentData(Doc document, String sourceId, Date version, Source source, int docsCount, boolean isJSONRequest) throws IOException {
+    public void insertDocumentData(Doc document, String sourceId, Date version, Source source, int docsCount, boolean isJSONRequest) throws IOException, InterruptedException {
         String documentId = documentHelperNative.insert(sourceId, document, version);
         logger.info(docsCount + " Insert document: " + document.getDisease().getName() + "_" + documentId );
 
@@ -128,22 +128,26 @@ public class WikipediaPopulateDbNative {
         //</editor-fold>
 
         //<editor-fold desc="RECORRIDO DE SECCIONES PARA ACCEDER A LOS TEXTOS">
-        for (Section section : document.getSectionList()) {
-            //<editor-fold desc="PERSISTIR has_section">
-            String sectionId = hasSectionHelperNative.insert(documentId, version, section);
-            //</editor-fold>
+        if (document.getSectionList()!=null) {
+            for (Section section : document.getSectionList()) {
+                if (section.getTextList() != null) {
+                    //<editor-fold desc="PERSISTIR has_section">
+                    String sectionId = hasSectionHelperNative.insert(documentId, version, section);
+                    //</editor-fold>
 
-            int textCount = 0;
-            for (Text text : section.getTextList()) {
+                    int textCount = 0;
+                    for (Text text : section.getTextList()) {
 //                            System.out.println("Have texts...");
-                //<editor-fold desc="INSERTAR TEXTO">
-                textHelperNative.insert(text, sectionId, documentId, version, isJSONRequest);
-                //</editor-fold>
+                        //<editor-fold desc="INSERTAR TEXTO">
+                        textHelperNative.insert(text, sectionId, documentId, version, isJSONRequest);
+                        //</editor-fold>
 
-                textCount++;
-            }// Textos
+                        textCount++;
+                    }// Textos
 
-        }// Secciones
+                }// Secciones
+            }
+        }
         //</editor-fold>
     }
 
@@ -155,7 +159,8 @@ public class WikipediaPopulateDbNative {
         //<editor-fold desc="RECORRIDO DE SECCIONES PARA ACCEDER A LOS TEXTOS">
         for (Section section : document.getSectionList()) {
             //<editor-fold desc="PERSISTIR has_section">
-            String sectionId = hasSectionHelperNative.insert(documentId, version, section);
+            String sectionId = null;
+            sectionId = hasSectionHelperNative.insert(documentId, version, section);
             //</editor-fold>
 
             int textCount = 0;

@@ -49,7 +49,7 @@ public class HasSectionHelperNative {
      * @return
      */
     @Transactional
-    public String insert(String documentId, Date version, Section section){
+    public String insert(String documentId, Date version, Section section) {
         //Busca la sección que ya debe existir
 //        System.out.println("Sección a buscar: " + section.getName());
         edu.ctb.upm.midas.model.jpa.Section existSection = sectionService.findByName( section.getName() );
@@ -59,8 +59,9 @@ public class HasSectionHelperNative {
         }else{
             //inserta la seccion si no existe
             try {
-                sectionHelperNative.insert(section.getName(), section.getDescription());
-                existSection = sectionService.findByName( section.getName() );
+                String trueId = sectionHelperNative.insert(section.getName(), section.getDescription());
+//                existSection = sectionService.findByName( section.getName() );
+                existSection = sectionService.findById( trueId );
             }catch (Exception e){
                 logger.error("Error to insert a new SECTION called: " + section.getDescription());
             }
@@ -69,10 +70,17 @@ public class HasSectionHelperNative {
                 try {
                     hasSectionService.insertNative(documentId, version, existSection.getSectionId());
                 } catch (Exception e) {
-                    logger.error("Error in hasSectionService.insertNative(documentId, version, existSection.getSectionId()); (line 67 to dev)");
+                    logger.error("Error in hasSectionService.insertNative(documentId, version, existSection.getSectionId()); (line 71 to dev)");
 //                logger.error();
                 }
+            }else{
+                logger.error("Error in hasSectionService.insertNative(documentId, version, existSection.getSectionId()); (line 76 to dev)");
             }
+//            try {
+//                Thread.sleep(3600000);
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
         }
         //retorna el id de la sección
         return existSection.getSectionId();

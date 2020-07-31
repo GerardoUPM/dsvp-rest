@@ -20,10 +20,13 @@ import edu.ctb.upm.midas.model.filter.metamap.response.Response;
 import edu.ctb.upm.midas.model.filter.metamap.special.HasSymptom;
 import edu.ctb.upm.midas.model.filter.metamap.special.SemanticType;
 import edu.ctb.upm.midas.model.filter.metamap.special.Symptom;
-import edu.ctb.upm.midas.service.jpa.DiseaseService;
+import edu.ctb.upm.midas.model.jpa.HasSemanticType;
+import edu.ctb.upm.midas.service.jpa.*;
 import edu.ctb.upm.midas.service.jpa.helperNative.ConfigurationHelper;
 import edu.ctb.upm.midas.service.jpa.helperNative.SymptomHelperNative;
 import gov.nih.nlm.nls.metamap.Ev;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -43,6 +46,9 @@ import java.util.*;
 @Service
 public class MetamapService {
 
+    private static final Logger logger = LoggerFactory.getLogger(MetamapService.class);
+
+
     @Autowired
     private ConsultHelper consultHelper;
     @Autowired
@@ -51,6 +57,14 @@ public class MetamapService {
     private MetamapResourceServiceImpl metamapResourceService;
     @Autowired
     private DiseaseService diseaseService;
+    @Autowired
+    private SymptomService symptomService;
+    @Autowired
+    private SemanticTypeService semanticTypeService;
+    @Autowired
+    private HasSemanticTypeService hasSemanticTypeService;
+    @Autowired
+    private HasSymptomService hasSymptomService;
     @Autowired
     private ConfigurationHelper configurationHelper;
 
@@ -373,6 +387,7 @@ public class MetamapService {
         conf.setSources(sources);
         conf.setSemanticTypes(Constants.SEMANTIC_TYPES_LIST);
         conf.setConcept_location(true);
+        conf.setRefreshSessionCount(0);
 
         request.setConfiguration( conf );
         request.setSnapshot(consult.getSnapshot());
@@ -738,15 +753,15 @@ public class MetamapService {
         FileWriter fileWriterSymptoms = new FileWriter(pathSymptoms);
         FileWriter fileWriteHasSemTypes = new FileWriter(pathHasSemTypes);
 
-        Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        //Metamap configuración
-        Configuration metamapConf = new Configuration();
-        metamapConf.setOptions("-y -R");
-        List<String> sources = new ArrayList<>();
-        sources.add("SNOMEDCT_US");
-        metamapConf.setSources(sources);
-        metamapConf.setSemanticTypes(Constants.SEMANTIC_TYPES_LIST);
-        metamapConf.setConcept_location(true);
+//        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+//        //Metamap configuración
+//        Configuration metamapConf = new Configuration();
+//        metamapConf.setOptions("-y -R");
+//        List<String> sources = new ArrayList<>();
+//        sources.add("SNOMEDCT_US");
+//        metamapConf.setSources(sources);
+//        metamapConf.setSemanticTypes(Constants.SEMANTIC_TYPES_LIST);
+//        metamapConf.setConcept_location(true);
 
         Response response = readMetamapResponseJSON(consult, false);
         System.out.println("Read JSON ready!");
@@ -853,33 +868,34 @@ public class MetamapService {
     }
 
 
+    public void insertInBatchOK(Consult consult){
+        Response response = null;
+        try {
+            response = readMetamapResponseJSON(consult, false);
+        }catch (Exception e) {
+            logger.error("Error to read the MetaMap JSON");
+        }
+
+
+    }
+
+
     @Transactional
     public void insertInBatch(Consult consult) throws Exception {
         final int batchSize = 500;
 
-        List<SemanticType> semanticTypes = new ArrayList<>();
-        List<Symptom> symptoms = new ArrayList<>();
-        List<HasSymptom> hasSymptoms = new ArrayList<>();
+        List<edu.ctb.upm.midas.model.jpa.SemanticType> semanticTypes = new ArrayList<>();
+        List<edu.ctb.upm.midas.model.jpa.Symptom> symptoms = new ArrayList<>();
+        List<edu.ctb.upm.midas.model.jpa.HasSymptom> hasSymptoms = new ArrayList<>();
+        List<edu.ctb.upm.midas.model.jpa.HasSemanticType> hasSemTypes = new ArrayList<>();
+
+        List<Symptom> symptomsAux = new ArrayList<>();
 
         List<String> semanticTypesInsertElements = new ArrayList<>();
         List<String> symptomsInsertElements = new ArrayList<>();
         List<String> hasSemanticTypesInsertElements = new ArrayList<>();
         List<String> hasSymptomInsertElements = new ArrayList<>();
 
-        String headSemTypes = "INSERT IGNORE INTO semantic_type (semantic_type, description) VALUES ";
-        String headSymptoms = "INSERT IGNORE INTO symptom (cui, name) VALUES ";
-        String headHasSemTypes = "INSERT IGNORE INTO has_semantic_type (cui, semantic_type) VALUES ";
-        String headHasSymptoms = "INSERT IGNORE INTO has_symptom (text_id, cui, validated, matched_words, positional_info) VALUES ";
-
-        Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        //Metamap configuración
-        Configuration metamapConf = new Configuration();
-        metamapConf.setOptions("-y -R");
-        List<String> sources = new ArrayList<>();
-        sources.add("SNOMEDCT_US");
-        metamapConf.setSources(sources);
-        metamapConf.setSemanticTypes(Constants.SEMANTIC_TYPES_LIST);
-        metamapConf.setConcept_location(true);
 
         Response response = readMetamapResponseJSON(consult, false);
         System.out.println("Read JSON ready!");
@@ -892,7 +908,7 @@ public class MetamapService {
                     int textCount = 1, conceptCount = 1, countTotalHasSymptom = countHasSymptom(textList);
 //                    String headHasSymptoms = "INSERT IGNORE INTO has_symptom (text_id, cui, validated, matched_words, positional_info) VALUES ";
                     for (edu.ctb.upm.midas.model.filter.metamap.response.Text metamapText : textList) {
-                        System.out.println(textCount + ". to " + textList.size() + " TextId: " + metamapText.getId());
+//                        System.out.println(textCount + ". to " + textList.size() + " TextId: " + metamapText.getId());
                         //Validar que haya conceptos
                         if (metamapText.getConcepts() != null) {
                             //Al menos un concepto
@@ -903,13 +919,21 @@ public class MetamapService {
                                 for (Concept concept : metamapText.getConcepts()) {
                                     /*if (!isInvalidatedSemanticType(concept.getSemanticTypes())) {//validar para no insertar "clna",     "qlco",     "hcpp"*/
                                     //Se crea un sintoma
-                                    Symptom symptom = new Symptom(concept.getCui(), concept.getName(), concept.getSemanticTypes());
-                                    //Se agrega a la lista
-                                    symptoms.add(symptom);
+//                                    edu.ctb.upm.midas.model.jpa.Symptom existSymp = null;
+//                                    existSymp = symptomService.findById(concept.getCui());
+
+//                                    if (existSymp==null){
+                                        edu.ctb.upm.midas.model.jpa.Symptom symptom = new edu.ctb.upm.midas.model.jpa.Symptom(concept.getCui(), concept.getName());
+                                        //Se agrega a la lista
+                                        symptoms.add(symptom);
+//                                    }
+                                    // Symps Aux
+                                    Symptom symp = new Symptom(concept.getCui(), concept.getName(), concept.getSemanticTypes());
+                                    symptomsAux.add(symp);
 
                                     //Se recorren los semantic types del concepto
                                     for (String semanticType : concept.getSemanticTypes()) {
-                                        SemanticType semType = new SemanticType(semanticType);
+                                        edu.ctb.upm.midas.model.jpa.SemanticType semType = new edu.ctb.upm.midas.model.jpa.SemanticType(semanticType);
                                         //Se crea la lista de semantic types
                                         semanticTypes.add(semType);
                                     }
@@ -932,56 +956,83 @@ public class MetamapService {
         //Eliminar repetidos
         //Tipos semanticos <<formar los insert para insertar semantics types "semantic_type">>
         System.out.println("SemanticTypes repetidos size: " + semanticTypes.size());
-        semanticTypes = removeRepetedSemanticTypes(semanticTypes);
+        semanticTypes = removeRepetedSemanticTypesJpa(semanticTypes);
         System.out.println("SemanticTypes sin repetir size: " + semanticTypes.size());
-        //formar inserts
-        try {
-            int counST = 1;
-//            String headSemTypes = "INSERT IGNORE INTO semantic_type (semantic_type, description) VALUES ";
-            for (SemanticType semanticType : semanticTypes) {
-                //INSERT IGNORE INTO symptom (cui, name) VALUES ('C0231418', "At risk for violence");INSERT IGNORE INTO has_semantic_type (cui, semantic_type) VALUES ('C0231418', 'fndg');
-                String semTypesElement = "('"+semanticType.getType()+"', '')";
-                semanticTypesInsertElements.add(semTypesElement);
-                counST++;
-            }
-        }catch (Exception e){
-            System.out.println("Mensaje de la excepción 4: " + e.getMessage());
-        }
+//        for (edu.ctb.upm.midas.model.jpa.SemanticType semanticType: semanticTypes) {
+//            edu.ctb.upm.midas.model.jpa.SemanticType existST = null;
+//            existST = semanticTypeService.findById(semanticType.getSemanticType());
+//            if (existST==null) semanticTypeService.insertNative(semanticType.getSemanticType(), semanticType.getDescription());
+//        }
 
         //Sintomas <<formar los insert para insertar sintomas "symptom" y sus tipos semanticos "has_semantic_type">>
         System.out.println("symptoms repetidos size: " + symptoms.size());
-        symptoms = removeRepetedSymptoms(symptoms);
+        symptoms = removeRepetedSymptomsJpa(symptoms);
         System.out.println("symptoms sin repetir size: " + symptoms.size());
+        edu.ctb.upm.midas.model.jpa.Symptom existS = null;
+//        for (edu.ctb.upm.midas.model.jpa.Symptom symp: symptoms) {
+//            existS = symptomService.findById(symp.getCui());
+//            if (existS==null) symptomService.insertNative(symp.getCui(), symp.getName());
+//        }
+
+        symptomsAux = removeRepetedSymptoms(symptomsAux);
         //formar inserts para los sintomas y sus tipos semanticos
         try {
-            int countS = 1, countHasSemType = 1, countHasSemTypes = countHasSemTypes(symptoms);
-//            String headSymptoms = "INSERT IGNORE INTO symptom (cui, name) VALUES ";
-//            String headHasSemTypes = "INSERT IGNORE INTO has_semantic_type (cui, semantic_type) VALUES ";
-            for (Symptom symptom : symptoms) {
-                String symptomsElement = "('"+symptom.getCui()+"', \""+symptom.getName()+"\")";
-                symptomsInsertElements.add(symptomsElement);
-                for (String semType: symptom.getSemanticTypes()) {
-                    String hasSemTypesElement = "('" + symptom.getCui() + "', '" + semType + "')";
-                    hasSemanticTypesInsertElements.add(hasSemTypesElement);
-                    countHasSemType++;
-                }
-                countS++;
-            }
+            int countS = 1, countHasSemType = 1, countHasSemTypes = countHasSemTypes(symptomsAux);
+            edu.ctb.upm.midas.model.jpa.SemanticType existST = null;
+//            for (Symptom symptom : symptomsAux) {
+//                for (String semType: symptom.getSemanticTypes()) {
+//                    existST = semanticTypeService.findById(semType);
+//                    if (existST==null) semanticTypeService.insertNative(semType, "");
+//
+////                    HasSemanticType hasSemanticType = new HasSemanticType(symptom.getCui(), semType);
+////                    hasSemTypes.add(hasSemanticType);
+//                    countHasSemType++;
+//                }
+//                countS++;
+//            }
         }catch (Exception e){
             System.out.println("Mensaje de la excepción 5: " + e.getMessage());
         }
 
+
         //HasSymptoms resultado del proceso de metamap en la tabla "has_symptom"
-        System.out.println("semantic_types size: " + semanticTypesInsertElements.size());
-        System.out.println("symptoms size: " + symptomsInsertElements.size());
-        System.out.println("has_semantic_types size: " + hasSemanticTypesInsertElements.size());
-        System.out.println("has_symptoms size: " + hasSymptomInsertElements.size());
+        System.out.println("semantic_types size: " + semanticTypes.size());
+        System.out.println("symptoms size: " + symptoms.size());
+        System.out.println("has_semantic_types size: " + hasSemTypes.size());
+        System.out.println("has_symptoms size: " + hasSymptoms.size());
+
+//        //es necesario quitar los que ya estan en la base de datos
+        logger.info("START batch symptoms insert");
+        symptomService.insertInBatch(symptoms);
+        logger.info("END batch symptoms insert");
+
+        logger.info("START batch symptoms insert");
+        semanticTypeService.insertInBatch(semanticTypes);
+        logger.info("END batch symptoms insert");
+
+        logger.info("START batch has semantic types insert");
+        hasSemanticTypeService.insertInBatch(hasSemTypes);
+        logger.info("END batch has semantic types insert");
+
+        logger.info("START batch has symptom insert");
+        hasSymptomService.insertInBatch(hasSymptoms);
+        logger.info("END batch has symptom insert");
+
+//        logger.info("START batch has symptom insert");
+//        int cHsympt = 1;
+//        for (edu.ctb.upm.midas.model.jpa.HasSymptom hasSymptom: hasSymptoms) {
+////            hasSymptomService.insertNative(hasSymptom.getTextId()
+////                    , hasSymptom.getCui()
+////                    ,hasSymptom.getValidated()!=0
+////                    , hasSymptom.getMatchedWords()
+////                    , hasSymptom.getPositionalInfo());
+//            if (hasSymptom.getPositionalInfo().length()>=500)
+//                logger.info(cHsympt + " to " + hasSymptoms.size() + " => " + hasSymptom.getTextId() + " - " + hasSymptom.getCui() + " - " + hasSymptom.getPositionalInfo().length());
+//            cHsympt++;
+//        }
+//        logger.info("END batch has symptom insert");
 
 
-        //insertar configuración
-//        System.out.println("Insert configuration...");
-//        String configurationJson = gson.toJson(metamapConf);
-//        configurationHelper.insert(consult.getSource(), consult.getDate(), constants.SERVICE_METAMAP_CODE, configurationJson);
 
     }
 
@@ -1030,10 +1081,29 @@ public class MetamapService {
         return resList;
     }
 
+    public List<edu.ctb.upm.midas.model.jpa.Symptom> removeRepetedSymptomsJpa(List<edu.ctb.upm.midas.model.jpa.Symptom> elements){
+        List<edu.ctb.upm.midas.model.jpa.Symptom> resList = elements;
+        Set<edu.ctb.upm.midas.model.jpa.Symptom> linkedHashSet = new LinkedHashSet<>();
+        linkedHashSet.addAll(elements);
+        elements.clear();
+        elements.addAll(linkedHashSet);
+
+        return resList;
+    }
 
     public List<SemanticType> removeRepetedSemanticTypes(List<SemanticType> elements){
         List<SemanticType> resList = elements;
         Set<SemanticType> linkedHashSet = new LinkedHashSet<>();
+        linkedHashSet.addAll(elements);
+        elements.clear();
+        elements.addAll(linkedHashSet);
+
+        return resList;
+    }
+
+    public List<edu.ctb.upm.midas.model.jpa.SemanticType> removeRepetedSemanticTypesJpa(List<edu.ctb.upm.midas.model.jpa.SemanticType> elements){
+        List<edu.ctb.upm.midas.model.jpa.SemanticType> resList = elements;
+        Set<edu.ctb.upm.midas.model.jpa.SemanticType> linkedHashSet = new LinkedHashSet<>();
         linkedHashSet.addAll(elements);
         elements.clear();
         elements.addAll(linkedHashSet);
@@ -1088,14 +1158,14 @@ public class MetamapService {
     }
 
 
-    public int createHasSymptomElement(List<Concept> concepts, List<Concept> noRepeatedConcepts, List<HasSymptom> hasSymptoms, String textId, int conceptCount, int countTotalHasSymptom, List<String> hasSymptomInsertElements){
+    public int createHasSymptomElement(List<Concept> concepts, List<Concept> noRepeatedConcepts, List<edu.ctb.upm.midas.model.jpa.HasSymptom> hasSymptoms, String textId, int conceptCount, int countTotalHasSymptom, List<String> hasSymptomInsertElements){
         //System.out.println("concepts: " + concepts.size() + " noRepetead: " + noRepeatedConcepts.size());
         try {
             int countC = 1;
             for (Concept uniqueConcept : noRepeatedConcepts) {
                 conceptCount++;
                 /*if (!isInvalidatedSemanticType(uniqueConcept.getSemanticTypes())) {*/
-                HasSymptom hasSymptom = new HasSymptom(textId, uniqueConcept.getCui(), (byte) 0);
+                edu.ctb.upm.midas.model.jpa.HasSymptom hasSymptom = new edu.ctb.upm.midas.model.jpa.HasSymptom(textId, uniqueConcept.getCui(), (byte) 0);
                 //System.out.println("ConceptUnique: " + uniqueConcept.getCui());
                 final int[] count = {1};
                 concepts.stream().filter(o -> o.getCui().equals(uniqueConcept.getCui())).forEach(
@@ -1121,7 +1191,7 @@ public class MetamapService {
                 hasSymptoms.add(hasSymptom);
                 String hasSymptomElement = "('" + hasSymptom.getTextId() + "', '" + hasSymptom.getCui() + "', 0, \"" + hasSymptom.getMatchedWords() + "\", \"" + hasSymptom.getPositionalInfo() + "\")";
                 hasSymptomInsertElements.add(hasSymptomElement);
-                System.out.println(conceptCount + ". " + hasSymptom);
+//                System.out.println(conceptCount + ". " + hasSymptom);
 
                 /*}*/
             }

@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.cloud.netflix.feign.EnableFeignClients;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
@@ -30,6 +31,7 @@ import java.util.List;
 //@EnableHystrix
 //@EnableDiscoveryClient
 @EnableScheduling
+@EntityScan(basePackages = "edu.ctb.upm.midas.model.jpa")
 public class DsvpApplication  implements CommandLineRunner {
 
 	private static final Logger logger = LoggerFactory.getLogger(DsvpApplication.class);

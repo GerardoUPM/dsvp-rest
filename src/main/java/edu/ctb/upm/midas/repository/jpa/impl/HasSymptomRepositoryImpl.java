@@ -4,8 +4,12 @@ import edu.ctb.upm.midas.model.jpa.HasSymptomPK;
 import edu.ctb.upm.midas.repository.jpa.AbstractDao;
 import edu.ctb.upm.midas.repository.jpa.HasSymptomRepository;
 import org.apache.commons.collections4.CollectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 
+import javax.persistence.EntityTransaction;
 import java.util.List;
 
 /**
@@ -20,6 +24,12 @@ import java.util.List;
 @Repository("HasSymptomRepositoryDao")
 public class HasSymptomRepositoryImpl extends AbstractDao<HasSymptomPK, HasSymptom>
                                         implements HasSymptomRepository {
+
+    private static final Logger logger = LoggerFactory.getLogger(HasSymptomRepositoryImpl.class);
+
+
+    @Value("${spring.jpa.properties.hibernate.jdbc.batch_size}")
+    private int batchSize;
 
     public HasSymptom findById(HasSymptomPK hasSymptomPK) {
         HasSymptom hasSymptom = getByKey(hasSymptomPK);
@@ -99,6 +109,20 @@ public class HasSymptomRepositoryImpl extends AbstractDao<HasSymptomPK, HasSympt
 //        ps.setString(1, );
 //
 //    }
+
+    @Override
+    public int insertInBatch(List<HasSymptom> entityList){
+        int count = 0;
+        for (HasSymptom hasSymptom: entityList) {
+            super.persist(hasSymptom);
+            count++;
+            if (count % batchSize == 0) {
+                getEntityManager().flush();
+                getEntityManager().clear();
+            }
+        }
+        return count;
+    }
 
     @Override
     public boolean deleteById(HasSymptomPK hasSymptomPK) {

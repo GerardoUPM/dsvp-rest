@@ -30,6 +30,8 @@ public interface HasSymptomRepository {
 
     int insertNative(String textId, String cui, boolean validated, String matchedWords, String positionalInfo);
 
+    int insertInBatch(List<HasSymptom> entityList);
+
     boolean deleteById(HasSymptomPK hasSymptomPK);
 
     void delete(HasSymptom hasSymptom);

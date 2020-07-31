@@ -1,7 +1,6 @@
 package edu.ctb.upm.midas.scheduling;
 
 import edu.ctb.upm.midas.common.util.TimeProvider;
-import edu.ctb.upm.midas.service._extract.MayoClinicExtractService;
 import edu.ctb.upm.midas.service._extract.WikipediaExtractService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,9 +18,9 @@ import org.springframework.stereotype.Service;
  * @see
  */
 @Service
-public class ExtractionScheduling {
+public class WikipediaExtractionScheduling {
 
-    private static final Logger logger = LoggerFactory.getLogger(ExtractionScheduling.class);
+    private static final Logger logger = LoggerFactory.getLogger(WikipediaExtractionScheduling.class);
 
 
     @Autowired
@@ -75,6 +74,15 @@ public class ExtractionScheduling {
         }catch (Exception e){
             logger.error("EIDW_ERR (1stOfTheMonth): " + e.getMessage());
         }
+    }
+
+
+    @Scheduled(cron = "0 0 4 1 * ?")
+    public void wikipediaExtractionEveryFirstDayOfTheMonthVerification() {
+        /*Primero consultar que hay textos para una sn y fuente (dos partes: la 1a verifica que el anterior proceso ya termino y 2a la verificación de que se insertaron textos)*/
+
+        /*En caso de no tener llamar usar la opción fix de la inserción*/
+        /*En caso contrario no realizar ninguna acción*/
     }
 
 

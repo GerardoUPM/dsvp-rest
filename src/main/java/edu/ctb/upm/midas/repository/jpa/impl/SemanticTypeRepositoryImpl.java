@@ -3,8 +3,10 @@ import edu.ctb.upm.midas.model.jpa.SemanticType;
 import edu.ctb.upm.midas.repository.jpa.AbstractDao;
 import edu.ctb.upm.midas.repository.jpa.SemanticTypeRepository;
 import org.apache.commons.collections4.CollectionUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 
+import javax.persistence.EntityTransaction;
 import java.util.List;
 
 /**
@@ -19,6 +21,9 @@ import java.util.List;
 @Repository("SemanticTypeRepositoryDao")
 public class SemanticTypeRepositoryImpl extends AbstractDao<String, SemanticType>
                                         implements SemanticTypeRepository {
+
+    @Value("${spring.jpa.properties.hibernate.jdbc.batch_size}")
+    private int batchSize;
 
     public SemanticType findById(String semanticType) {
         SemanticType semanticType1 = getByKey(semanticType);
@@ -105,6 +110,20 @@ public class SemanticTypeRepositoryImpl extends AbstractDao<String, SemanticType
                 .setParameter("cui", cui)
                 .setParameter("semanticType", semanticType)
                 .executeUpdate();
+    }
+
+    @Override
+    public int insertInBatch(List<SemanticType> entityList) {
+        int count = 0;
+        for (SemanticType semanticType: entityList) {
+            super.persist(semanticType);
+            count++;
+            if (count % batchSize == 0) {
+                getEntityManager().flush();
+                getEntityManager().clear();
+            }
+        }
+        return count;
     }
 
     @Override

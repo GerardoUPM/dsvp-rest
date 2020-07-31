@@ -50,6 +50,10 @@ import java.util.Objects;
                 name = "HasText.insertNative",
                 query = "INSERT IGNORE INTO has_text (document_id, date, section_id, text_id, text_order) "
                         + "VALUES (:documentId, :date, :sectionId, :textId, :textOrder)"
+        ),
+        @NamedNativeQuery(
+                name = "HasText.associated",
+                query = "select count(*) from has_text where date = :source and text_id like :sourceCode "
         )
 })
 

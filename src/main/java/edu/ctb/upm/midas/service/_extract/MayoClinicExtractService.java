@@ -63,6 +63,7 @@ public class MayoClinicExtractService {
     public boolean extract(String snapshot, boolean json) throws Exception {
         boolean res = false;
         String inicio = timeProvider.getTime();
+        snapshot = (json)?snapshot:timeProvider.sqlDateFormatyyyyMMdd(timeProvider.getSqlDate());
 //        Date snapshot = timeProvider.getSqlDate();
 //        Response response = retrieveTexts(json, timeProvider.dateFormatyyyyMMdd(snapshot));
         Response response = retrieveTexts(json, snapshot);

@@ -1,6 +1,7 @@
 package edu.ctb.upm.midas.model.jpa;
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
+import org.hibernate.annotations.SQLInsert;
 
 import javax.persistence.*;
 import javax.xml.bind.annotation.XmlRootElement;
@@ -17,6 +18,8 @@ import java.util.Objects;
  */
 @Entity
 @Table(name = "has_symptom", catalog = "edsssdb", schema = "")
+@SQLInsert(sql = "INSERT IGNORE INTO has_symptom (text_id, cui, validated, matched_words, positional_info) " +
+        "VALUES (?, ?, ?, ?, ?)" )
 @XmlRootElement
 @NamedQueries({
         @NamedQuery(name = "HasSymptom.findAll", query = "SELECT h FROM HasSymptom h")
@@ -97,6 +100,15 @@ public class HasSymptom {
     private String positionalInfo;
     private Text textByTextId;
     private Symptom symptomByCui;
+
+    public HasSymptom() {
+    }
+
+    public HasSymptom(String textId, String cui, Byte validated) {
+        this.textId = textId;
+        this.cui = cui;
+        this.validated = validated;
+    }
 
     @Id
     @Column(name = "text_id", nullable = false, length = 255)

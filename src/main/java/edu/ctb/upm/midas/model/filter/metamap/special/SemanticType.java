@@ -21,6 +21,7 @@ public class SemanticType {
         this.type = type;
     }
 
+
     public String getType() {
         return type;
     }

@@ -1,4 +1,6 @@
 package edu.ctb.upm.midas.service.jpa.impl;
+import edu.ctb.upm.midas.model.filter.common.Consult;
+import edu.ctb.upm.midas.model.filter.metamap.response.Response;
 import edu.ctb.upm.midas.model.jpa.HasSymptom;
 import edu.ctb.upm.midas.model.jpa.HasSymptomPK;
 import edu.ctb.upm.midas.repository.jpa.HasSymptomRepository;
@@ -47,6 +49,11 @@ public class HasSymptomServiceImpl implements HasSymptomService {
     @Override
     public int insertNative(String textId, String cui, boolean validated, String matchedWords, String positionalInfo) {
         return daoHasSymptom.insertNative( textId, cui, validated, matchedWords, positionalInfo );
+    }
+
+    @Transactional(propagation= Propagation.REQUIRED)
+    public int insertInBatch(List<HasSymptom> entityList){
+        return daoHasSymptom.insertInBatch(entityList);
     }
 
     @Transactional(propagation= Propagation.REQUIRED)

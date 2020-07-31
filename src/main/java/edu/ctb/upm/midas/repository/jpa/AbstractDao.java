@@ -4,6 +4,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import java.io.Serializable;
 import java.lang.reflect.ParameterizedType;
+import java.util.List;
 
 /**
  * Created by gerardo on 28/04/2017.
@@ -38,6 +39,8 @@ public abstract class AbstractDao<PK extends Serializable, T> {
     protected void persist(T entity) {
         entityManager.persist(entity);
     }
+
+//    protected void insertInBatch(List<T> entityList){    }
 
     protected T update(T entity) {
         return entityManager.merge(entity);

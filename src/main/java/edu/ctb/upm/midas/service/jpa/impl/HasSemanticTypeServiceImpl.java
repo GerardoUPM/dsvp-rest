@@ -1,8 +1,12 @@
 package edu.ctb.upm.midas.service.jpa.impl;
 import edu.ctb.upm.midas.model.jpa.HasSemanticType;
 import edu.ctb.upm.midas.model.jpa.HasSemanticTypePK;
+import edu.ctb.upm.midas.repository.jpa.HasSemanticTypeRepository;
 import edu.ctb.upm.midas.service.jpa.HasSemanticTypeService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -17,6 +21,10 @@ import java.util.List;
  */
 @Service("hasSemanticTypeService")
 public class HasSemanticTypeServiceImpl implements HasSemanticTypeService {
+
+    @Autowired
+    private HasSemanticTypeRepository daoHasSemanticTypeRepository;
+
     @Override
     public HasSemanticType findById(HasSemanticTypePK hasSemanticTypePK) {
         return null;
@@ -40,6 +48,11 @@ public class HasSemanticTypeServiceImpl implements HasSemanticTypeService {
     @Override
     public void save(HasSemanticType hasSemanticType) {
 
+    }
+
+    @Transactional(propagation= Propagation.REQUIRED)
+    public int insertInBatch(List<HasSemanticType> entityList) {
+        return daoHasSemanticTypeRepository.insertInBatch(entityList);
     }
 
     @Override

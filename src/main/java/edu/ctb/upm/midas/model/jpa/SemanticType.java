@@ -1,6 +1,7 @@
 package edu.ctb.upm.midas.model.jpa;
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
+import org.hibernate.annotations.SQLInsert;
 
 import javax.persistence.*;
 import javax.xml.bind.annotation.XmlRootElement;
@@ -18,6 +19,8 @@ import java.util.Objects;
  */
 @Entity
 @Table(name = "semantic_type", catalog = "edsssdb", schema = "")
+@SQLInsert(sql = "INSERT IGNORE INTO semantic_type (semantic_type, description) " +
+        "VALUES (?, ?)" )
 @XmlRootElement
 @NamedQueries({
         @NamedQuery(name = "SemanticType.findAll", query = "SELECT s FROM SemanticType s")
@@ -73,6 +76,13 @@ public class SemanticType {
     private String semanticType;
     private String description;
     private List<HasSemanticType> hasSemanticTypesBySemanticType;
+
+    public SemanticType() {
+    }
+
+    public SemanticType(String semanticType) {
+        this.semanticType = semanticType;
+    }
 
     @Id
     @Column(name = "semantic_type", nullable = false, length = 8)

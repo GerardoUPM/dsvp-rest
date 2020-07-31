@@ -36,6 +36,8 @@ public interface SymptomRepository {
 
     int insertNative(String cui, String name);
 
+    int insertInBatch(List<Symptom> entityList);
+
     boolean deleteById(String cui);
 
     void delete(Symptom symptom);

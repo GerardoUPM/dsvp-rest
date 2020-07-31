@@ -27,6 +27,8 @@ public interface SemanticTypeService {
 
     int insertNativeHasSemanticType(String cui, String semanticType);
 
+    int insertInBatch(List<SemanticType> entityList);
+
     boolean updateFindFull(SemanticType semanticType);
 
     boolean updateFindPartial(SemanticType semanticType);

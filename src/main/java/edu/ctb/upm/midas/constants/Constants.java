@@ -63,6 +63,9 @@ public class Constants {
     public static final String WIKIPEDIA_DISEASE_LIST_FILE_NAME = "_wikipedia_disease_list";
     public static final String ANALISIS_FOLDER = "tmp/analisis/";
 
+    /* thesis analysis */
+    public static final String THESIS_ANALYSIS_SVD_DIRECTORY = "tmp/thesis/svd/";
+
     public static final String DOT_JSON = ".json";
     public static final String DOT_XML = ".xml";
 

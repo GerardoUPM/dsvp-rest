@@ -33,6 +33,8 @@ public interface SemanticTypeRepository {
 
     int insertNativeHasSemanticType(String cui, String semanticType);
 
+    int insertInBatch(List<SemanticType> entityList);
+
     boolean deleteById(String semanticType);
 
     void delete(SemanticType semanticType);
