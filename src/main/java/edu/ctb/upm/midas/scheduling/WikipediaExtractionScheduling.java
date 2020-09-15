@@ -1,6 +1,7 @@
 package edu.ctb.upm.midas.scheduling;
 
 import edu.ctb.upm.midas.common.util.TimeProvider;
+import edu.ctb.upm.midas.service.EmailService;
 import edu.ctb.upm.midas.service._extract.WikipediaExtractService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +28,8 @@ public class WikipediaExtractionScheduling {
     private TimeProvider timeProvider;
     @Autowired
     private WikipediaExtractService wikipediaExtractService;
+    @Autowired
+    private EmailService emailService;
 
     /**
      * Método para extraer una nueva lista de enfermedades desde DBPedia y almacenar en la
@@ -71,6 +74,7 @@ public class WikipediaExtractionScheduling {
             logger.info("(Wikipedia) Scheduled task for the first of each month at midnight " + timeProvider.getNowFormatyyyyMMdd() + " start.");
             wikipediaExtractService.extract("", false, false, false);
             logger.info("(Wikipedia) Scheduled task for the first of each month at midnight " + timeProvider.getNowFormatyyyyMMdd() + " end.");
+            EmailService.sendEmail();
         }catch (Exception e){
             logger.error("EIDW_ERR (1stOfTheMonth): " + e.getMessage());
         }
@@ -105,6 +109,7 @@ public class WikipediaExtractionScheduling {
             logger.info("(Wikipedia) Scheduled for the 15th of each month at midnight " + timeProvider.getNowFormatyyyyMMdd() + " start.");
             wikipediaExtractService.extract("", false, false, false);
             logger.info("(Wikipedia) Scheduled for the 15th of each month at midnight " + timeProvider.getNowFormatyyyyMMdd() + " end.");
+            EmailService.sendEmail();
         }catch (Exception e){
             logger.error("(Wikipedia) 15thOfTheMonth: " + e.getMessage());
         }
