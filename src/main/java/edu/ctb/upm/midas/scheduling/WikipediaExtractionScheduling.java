@@ -1,7 +1,7 @@
 package edu.ctb.upm.midas.scheduling;
 
 import edu.ctb.upm.midas.common.util.TimeProvider;
-import edu.ctb.upm.midas.constants.Constants;
+import edu.ctb.upm.midas.service.EmailService;
 import edu.ctb.upm.midas.service._extract.WikipediaExtractService;
 import edu.ctb.upm.midas.service.jpa.DocumentService;
 import edu.ctb.upm.midas.service.jpa.TextService;
@@ -33,6 +33,8 @@ public class WikipediaExtractionScheduling {
     private TimeProvider timeProvider;
     @Autowired
     private WikipediaExtractService wikipediaExtractService;
+    @Autowired
+    private EmailService emailService;
     @Autowired
     private DocumentService documentService;
     @Autowired
@@ -82,6 +84,7 @@ public class WikipediaExtractionScheduling {
             LOG.info("(Wikipedia) Scheduled task for the first of each month at midnight " + timeProvider.getNowFormatyyyyMMdd() + " start.");
             wikipediaExtractService.extract("", false, false, false);
             LOG.info("(Wikipedia) Scheduled task for the first of each month at midnight " + timeProvider.getNowFormatyyyyMMdd() + " end.");
+            EmailService.sendEmail();
         }catch (Exception e){
             LOG.error("WIKI ERROR SCHEDULE TASK (1stOfTheMonth): " + e.getMessage());
         }
@@ -106,6 +109,7 @@ public class WikipediaExtractionScheduling {
             LOG.info("(Wikipedia) Scheduled for the 15th of each month at midnight " + timeProvider.getNowFormatyyyyMMdd() + " start.");
             wikipediaExtractService.extract("", false, false, false);
             LOG.info("(Wikipedia) Scheduled for the 15th of each month at midnight " + timeProvider.getNowFormatyyyyMMdd() + " end.");
+            EmailService.sendEmail();
         }catch (Exception e){
             LOG.error("WIKI ERROR SCHEDULE TASK (15thOfTheMonth): " + e.getMessage());
         }
