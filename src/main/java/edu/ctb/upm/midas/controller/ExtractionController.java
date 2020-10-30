@@ -65,11 +65,12 @@ public class ExtractionController {
 
     @RequestMapping(path = { "${my.service.rest.request.mapping.mayoclinic.retrieval.texts.path}" }, //_wikipedia extraction
             method = RequestMethod.GET,
-            params = {"snapshot", "json"})
+            params = {"snapshot", "json", "fix"})
     public String mayoClinicExtract(
             @RequestParam(value = "snapshot") @Valid @NotBlank @NotNull @NotEmpty String snapshot,
-            @RequestParam(value = "json", required = false, defaultValue = "true") boolean json) throws Exception {
-        mayoClinicExtractService.extract(snapshot, json);
+            @RequestParam(value = "json", required = false, defaultValue = "true") boolean json,
+            @RequestParam(value = "fix", required = false, defaultValue = "false") boolean fix) throws Exception {
+        mayoClinicExtractService.extract(snapshot, json, fix);
         return "Successful extraction and insertion in a DB!";
     }
 

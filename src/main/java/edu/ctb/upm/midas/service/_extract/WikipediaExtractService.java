@@ -146,7 +146,7 @@ public class WikipediaExtractService {
         }else{
             System.out.println("ERROR disease album");
         }
-        System.out.println("Inicio:" + inicio + " | Termino: " + timeProvider.getTime());
+        System.out.println("Start: " + inicio + " | End: " + timeProvider.getTime());
 
         return res;
     }

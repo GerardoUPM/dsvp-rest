@@ -18,8 +18,11 @@ import edu.ctb.upm.midas.model.jpa.Document;
 import edu.ctb.upm.midas.model.jpa.DocumentUrl;
 import edu.ctb.upm.midas.model.jpa.HasDisease;
 import edu.ctb.upm.midas.model.jpa.Url;
+import edu.ctb.upm.midas.scheduling.TvpScheduling;
 import edu.ctb.upm.midas.service._populate.MayoClinicPopulateDbNative;
 import edu.ctb.upm.midas.service.jpa.DocumentService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -38,6 +41,8 @@ import java.util.List;
  */
 @Service
 public class MayoClinicExtractService {
+
+    private static final Logger LOG = LoggerFactory.getLogger(MayoClinicExtractService.class);
 
     @Autowired
     private MayoClinicPopulateDbNative mayoclinicPopulateDbNative;
@@ -60,7 +65,7 @@ public class MayoClinicExtractService {
      * @return
      * @throws Exception
      */
-    public boolean extract(String snapshot, boolean json) throws Exception {
+    public boolean extract(String snapshot, boolean json, boolean fix) throws Exception {
         boolean res = false;
         String inicio = timeProvider.getTime();
         snapshot = (json)?snapshot:timeProvider.sqlDateFormatyyyyMMdd(timeProvider.getSqlDate());
@@ -72,7 +77,7 @@ public class MayoClinicExtractService {
             if (response.getResponseCode().equals(StatusHttpEnum.OK.getClave())) {
                 if (response.getSources() != null) {
 //                    mayoclinicPopulateDbNative.populate(response.getSources(), snapshot, json);
-                    mayoclinicPopulateDbNative.populate(response.getSources(), timeProvider.stringToDate(snapshot), json);
+                    mayoclinicPopulateDbNative.populate(response.getSources(), timeProvider.stringToDate(snapshot), json, fix);
                 } else {
                     //Source vacío
                 }
@@ -80,13 +85,12 @@ public class MayoClinicExtractService {
                 //Estatus error
             }
         }else{
-            System.out.println("Response nulo");
+            LOG.error("Response null");
         }
-        System.out.println("Inicio:" + inicio + " | Termino: " + timeProvider.getTime());
+        LOG.info("Inicio:" + inicio + " | Termino: " + timeProvider.getTime());
 
         return res;
     }
-
 
     /**
      * @param isJSONRequest
@@ -118,7 +122,6 @@ public class MayoClinicExtractService {
         return response;
     }
 
-
     /**
      * @param snapshot
      * @return
@@ -138,7 +141,6 @@ public class MayoClinicExtractService {
 
         return res;
     }
-
 
     /**
      * Método que muestra un reporte de la extracción recien hecha
@@ -237,7 +239,6 @@ public class MayoClinicExtractService {
 
     }
 
-
     public void printFromDatabase(){
         List<WebLink> xmlLinks = new ArrayList<>();
         List<Document> documents = documentService.findAll();
@@ -270,5 +271,4 @@ public class MayoClinicExtractService {
         }
         //extractService.onlyExtract(xmlLinks);
     }
-
 }

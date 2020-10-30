@@ -7,7 +7,7 @@ import com.google.gson.GsonBuilder;
 import edu.ctb.upm.midas.client_modules.filter.tvp.api_response.impl.TvpResourceServiceImpl;
 import edu.ctb.upm.midas.constants.Constants;
 import edu.ctb.upm.midas.model.filter.common.Consult;
-import edu.ctb.upm.midas.model.filter.common.component.ConsultHelper;
+import edu.ctb.upm.midas.service.filter.helper.ConsultHelper;
 import edu.ctb.upm.midas.model.filter.common.query.ResponseSymptom;
 import edu.ctb.upm.midas.model.filter.tvp.TvpConfiguration;
 import edu.ctb.upm.midas.model.filter.tvp.request.Request;

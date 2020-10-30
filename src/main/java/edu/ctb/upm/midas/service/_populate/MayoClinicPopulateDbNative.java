@@ -69,7 +69,7 @@ public class MayoClinicPopulateDbNative {
      * @throws Exception
      */
     @Transactional
-    public void populate(List<Source> sourceList, Date version, boolean isJSONRequest) throws Exception {
+    public void populate(List<Source> sourceList, Date version, boolean isJSONRequest, boolean fix) throws Exception {
         //Date version = dateVersion;//date.getSqlDate();
         System.out.println("-------------------- POPULATE DATABASE --------------------");
         System.out.println("Populate start...");
@@ -85,7 +85,11 @@ public class MayoClinicPopulateDbNative {
             int docsCount = 1, invalidCount = 1;
             //<editor-fold desc="PERSISTIR TODOS LOS DATOS DE LOS DOCUMENTOS DISNET">
             for (Doc document: source.getDocuments()) {
-                insertDocumentData(document, sourceId, version, source, docsCount, isJSONRequest);
+                if (fix) {
+                    insertDocumentDataRestore(document, sourceId, version, source, docsCount, isJSONRequest);
+                } else {
+                    insertDocumentData(document, sourceId, version, source, docsCount, isJSONRequest);
+                }
                 docsCount++;
             }// Documentos
             //</editor-fold>
@@ -130,6 +134,41 @@ public class MayoClinicPopulateDbNative {
                         textHelperNative.insert(text, sectionId, documentId, version, isJSONRequest);
                         //</editor-fold>
 
+                        textCount++;
+                    }// Textos
+                }
+
+            }// Secciones
+        }
+        //</editor-fold>
+
+//        System.out.println(docsCount + " Insert document: " + document.getDisease().getName() + "_" + documentId + "(" + diseaseId + ")");
+        System.out.println(docsCount + " Insert document: " + document.getDisease().getName() + "_" + documentId );
+    }
+
+    @Transactional
+    public void insertDocumentDataRestore(Doc document, String sourceId, Date version, Source source, int docsCount, boolean isJSONRequest) throws IOException {
+        //Genera el documentId ya existente
+        String documentId = documentHelperNative.createDocumentId(sourceId, document, version);
+        System.out.println(docsCount + " Insert document: " + document.getDisease().getName() + "_" + documentId );
+
+        //<editor-fold desc="RECORRIDO DE SECCIONES PARA ACCEDER A LOS TEXTOS">
+        if (document.getSectionList() != null) {
+            for (Section section : document.getSectionList()) {
+                //Si la sección no tiene textos no se inserta en la relación has_section
+                if (section.getTextList() != null) {
+                    //<editor-fold desc="PERSISTIR has_section">
+                    //inserta la sección para ese documento
+                    String sectionId = hasSectionHelperNative.insert(documentId, version, section);
+                    //</editor-fold>
+
+                    //Validar si hay textos
+                    int textCount = 0;
+                    for (Text text : section.getTextList()) {
+                        //<editor-fold desc="INSERTAR TEXTO">
+//                        System.out.println("Insertar textos");
+                        textHelperNative.insert(text, sectionId, documentId, version, isJSONRequest);
+                        //</editor-fold>
                         textCount++;
                     }// Textos
                 }

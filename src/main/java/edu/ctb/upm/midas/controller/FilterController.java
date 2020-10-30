@@ -37,7 +37,7 @@ public class FilterController {
     @Autowired
     private TimeProvider utilDate;
 
-    @RequestMapping(path = { "/metamap" }, //Term Validation Procedure
+    @RequestMapping(path = { "/metamap" },
             method = RequestMethod.GET)
     public String metamapFilter() throws Exception {
 
@@ -53,7 +53,7 @@ public class FilterController {
     }
 
 
-    @RequestMapping(path = { "/metamap/diseases" }, //Term Validation Procedure
+    @RequestMapping(path = { "/metamap/diseases" },
             method = RequestMethod.GET)
     public String metamapFilterDiseasesName() throws Exception {
 
@@ -65,8 +65,7 @@ public class FilterController {
         return "It has been successfully filtered DISEASES NAME with Metamap";
     }
 
-
-    @RequestMapping(path = { "/metamap/json" }, //Term Validation Procedure
+    @RequestMapping(path = { "/metamap/json" },
             method = RequestMethod.GET,
             params = {"source", "snapshot", "action"})
     public String metamapFilterWithJSON(@RequestParam(value = "source") @Valid @NotBlank @NotNull @NotEmpty String source,

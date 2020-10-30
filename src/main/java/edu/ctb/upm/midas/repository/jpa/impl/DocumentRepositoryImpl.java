@@ -72,10 +72,11 @@ public class DocumentRepositoryImpl extends AbstractDao<DocumentPK, Document>
 
     @Override
     @SuppressWarnings("unchecked")
-    public Date findLastVersionNative() {
+    public Date findLastVersionNative(String source) {
         Date version = null;
         List<Date> versionList = (List<Date>) getEntityManager()
                 .createNamedQuery("Document.findLastVersionNative")
+                .setParameter("source", source)
                 .setMaxResults(1)
                 .getResultList();
         if (CollectionUtils.isNotEmpty(versionList))

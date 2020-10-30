@@ -1,12 +1,18 @@
 package edu.ctb.upm.midas.scheduling;
 
 import edu.ctb.upm.midas.common.util.TimeProvider;
+import edu.ctb.upm.midas.constants.Constants;
 import edu.ctb.upm.midas.service._extract.WikipediaExtractService;
+import edu.ctb.upm.midas.service.jpa.DocumentService;
+import edu.ctb.upm.midas.service.jpa.TextService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+
+import java.util.Date;
+import java.util.List;
 
 /**
  * Created by gerardo on 03/11/2017.
@@ -20,13 +26,19 @@ import org.springframework.stereotype.Service;
 @Service
 public class WikipediaExtractionScheduling {
 
-    private static final Logger logger = LoggerFactory.getLogger(WikipediaExtractionScheduling.class);
+    private static final Logger LOG = LoggerFactory.getLogger(WikipediaExtractionScheduling.class);
 
 
     @Autowired
     private TimeProvider timeProvider;
     @Autowired
     private WikipediaExtractService wikipediaExtractService;
+    @Autowired
+    private DocumentService documentService;
+    @Autowired
+    private TextService textService;
+
+
 
     /**
      * Método para extraer una nueva lista de enfermedades desde DBPedia y almacenar en la
@@ -67,28 +79,18 @@ public class WikipediaExtractionScheduling {
     @Scheduled(cron = "0 0 4 1 * ?")
     public void wikipediaExtractionEveryFirstDayOfTheMonth() throws Exception {
         try {
-//            WikipediaExtractService wikipediaExtractService = new WikipediaExtractService();
-            logger.info("(Wikipedia) Scheduled task for the first of each month at midnight " + timeProvider.getNowFormatyyyyMMdd() + " start.");
+            LOG.info("(Wikipedia) Scheduled task for the first of each month at midnight " + timeProvider.getNowFormatyyyyMMdd() + " start.");
             wikipediaExtractService.extract("", false, false, false);
-            logger.info("(Wikipedia) Scheduled task for the first of each month at midnight " + timeProvider.getNowFormatyyyyMMdd() + " end.");
+            LOG.info("(Wikipedia) Scheduled task for the first of each month at midnight " + timeProvider.getNowFormatyyyyMMdd() + " end.");
         }catch (Exception e){
-            logger.error("EIDW_ERR (1stOfTheMonth): " + e.getMessage());
+            LOG.error("WIKI ERROR SCHEDULE TASK (1stOfTheMonth): " + e.getMessage());
         }
     }
 
-
-    @Scheduled(cron = "0 0 4 1 * ?")
+    @Scheduled(cron = "0 0 0 2 * ?")
     public void wikipediaExtractionEveryFirstDayOfTheMonthVerification() {
-        /*Primero consultar que hay textos para una sn y fuente (dos partes: la 1a verifica que el anterior proceso ya termino y 2a la verificación de que se insertaron textos)*/
-
-        /*En caso de no tener llamar usar la opción fix de la inserción*/
-        /*En caso contrario no realizar ninguna acción*/
+        fixWikipediaSnapshot();
     }
-
-
-//    @Scheduled(cron = "0 0 0 2 * ?")
-//    public void completeInsert() { }
-
 
     /**
      * Método para extraer una nueva lista de enfermedades desde DBPedia y almacenar en la
@@ -101,27 +103,62 @@ public class WikipediaExtractionScheduling {
     @Scheduled(cron = "0 0 4 15 * ?")
     public void wikipediaExtractionEvery15thDayOfTheMonth() {
         try {
-//            WikipediaExtractService wikipediaExtractService = new WikipediaExtractService();
-            logger.info("(Wikipedia) Scheduled for the 15th of each month at midnight " + timeProvider.getNowFormatyyyyMMdd() + " start.");
+            LOG.info("(Wikipedia) Scheduled for the 15th of each month at midnight " + timeProvider.getNowFormatyyyyMMdd() + " start.");
             wikipediaExtractService.extract("", false, false, false);
-            logger.info("(Wikipedia) Scheduled for the 15th of each month at midnight " + timeProvider.getNowFormatyyyyMMdd() + " end.");
+            LOG.info("(Wikipedia) Scheduled for the 15th of each month at midnight " + timeProvider.getNowFormatyyyyMMdd() + " end.");
         }catch (Exception e){
-            logger.error("(Wikipedia) 15thOfTheMonth: " + e.getMessage());
+            LOG.error("WIKI ERROR SCHEDULE TASK (15thOfTheMonth): " + e.getMessage());
         }
     }
 
+    @Scheduled(cron = "0 0 0 16 * ?")
+    public void wikipediaExtractionEvery15thDayOfTheMonthVerification() {
+        fixWikipediaSnapshot();
+    }
+
+    private boolean fixWikipediaSnapshot(){
+        boolean res = false;
+        String start = timeProvider.getTime();
+        LOG.info("(Wikipedia) Scheduled task for fix the first of each month at midnight " + start + " start.");
+        Date lastSnapshot = documentService.findLastVersionNative(Constants.SOURCE_WIKIPEDIA);
+        LOG.info("PARAMS => snapshot: " + lastSnapshot + " | " + Constants.SOURCE_WIKIPEDIA);
+        List<Object[]> texts = textService.findBySourceAndVersionNative(lastSnapshot, Constants.SOURCE_WIKIPEDIA);
+
+        if (texts==null) {
+            LOG.warn("The snapshot of Wikipedia: " + lastSnapshot + " needs to be fixed");
+            try {
+                boolean fix = wikipediaExtractService.extract(
+                        timeProvider.dateFormatyyyyMMdd(lastSnapshot)
+                        , true
+                        , false
+                        , true);
+                if (fix) {
+                    LOG.info("Successful fixing");
+                    res = true;
+                }
+            } catch (Exception e) {
+                LOG.error("Error to fixed the Wikipedia snapshot: " + lastSnapshot, e);
+            }
+
+        } else {
+            LOG.info("The snapshot of Wikipedia: " + lastSnapshot + " is not NULL, is correct");
+        }
+        LOG.info("(Wikipedia) Scheduled task for fix the first of each month at midnight " + timeProvider.getNowFormatyyyyMMdd() + " end.");
+        LOG.info("Review => Start: " + start + " | End: " + timeProvider.getTime());
+
+        return res;
+    }
 
     public void wikipediaExtraction() throws Exception {
 //        try {
 //            WikipediaExtractService wikipediaExtractService = new WikipediaExtractService();
-            logger.info("(Wikipedia) force scheduled extraction method " + timeProvider.getNowFormatyyyyMMdd() + " start.");
+            LOG.info("(Wikipedia) force scheduled extraction method " + timeProvider.getNowFormatyyyyMMdd() + " start.");
             wikipediaExtractService.extract("", false, false, false);
-            logger.info("(Wikipedia) force scheduled extraction method " + timeProvider.getNowFormatyyyyMMdd() + " end.");
+            LOG.info("(Wikipedia) force scheduled extraction method " + timeProvider.getNowFormatyyyyMMdd() + " end.");
 //        }catch (Exception e){
 //            logger.error("(Wikipedia) force methid: " + e.getMessage());
 //        }
     }
-
 
 //    @Scheduled(cron = "0 0 2 1 * ?")
 //    public void mayoclinicExtractionEveryFirstDayOfTheMonth() {

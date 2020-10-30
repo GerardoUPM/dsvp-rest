@@ -21,7 +21,7 @@ public interface DocumentService {
 
     Document findById(DocumentPK documentPk);
 
-    Date findLastVersionNative();
+    Date findLastVersionNative(String source);
 
     List<Document> findAll();
 

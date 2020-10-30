@@ -48,10 +48,18 @@ import java.util.Objects;
                         + "FROM document d WHERE d.document_id = :documentId AND d.date = :date ",
                 resultClass = Document.class
         ),
+//        @NamedNativeQuery(
+//                name = "Document.findLastVersionNative",
+//                query = "SELECT MAX(date) 'last' "
+//                        + "FROM document d "
+//        ),
         @NamedNativeQuery(
                 name = "Document.findLastVersionNative",
-                query = "SELECT MAX(date) 'last' "
-                        + "FROM document d "
+                query = "select max(d.date) 'last'" +
+                        "from document d " +
+                        "inner join has_source hs on d.document_id = hs.document_id and d.date = hs.date " +
+                        "inner join source s on hs.source_id = s.source_id " +
+                        "where s.name = :source "
         ),
 
         // INSERTS

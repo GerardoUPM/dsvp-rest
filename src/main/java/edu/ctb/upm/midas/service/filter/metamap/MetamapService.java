@@ -9,7 +9,7 @@ import edu.ctb.upm.midas.common.util.TimeProvider;
 import edu.ctb.upm.midas.common.util.UniqueId;
 import edu.ctb.upm.midas.constants.Constants;
 import edu.ctb.upm.midas.model.filter.common.Consult;
-import edu.ctb.upm.midas.model.filter.common.component.ConsultHelper;
+import edu.ctb.upm.midas.service.filter.helper.ConsultHelper;
 import edu.ctb.upm.midas.model.filter.common.query.ResponseText;
 import edu.ctb.upm.midas.model.filter.metamap.request.Configuration;
 import edu.ctb.upm.midas.model.filter.metamap.request.Request;
@@ -20,7 +20,6 @@ import edu.ctb.upm.midas.model.filter.metamap.response.Response;
 import edu.ctb.upm.midas.model.filter.metamap.special.HasSymptom;
 import edu.ctb.upm.midas.model.filter.metamap.special.SemanticType;
 import edu.ctb.upm.midas.model.filter.metamap.special.Symptom;
-import edu.ctb.upm.midas.model.jpa.HasSemanticType;
 import edu.ctb.upm.midas.service.jpa.*;
 import edu.ctb.upm.midas.service.jpa.helperNative.ConfigurationHelper;
 import edu.ctb.upm.midas.service.jpa.helperNative.SymptomHelperNative;
@@ -393,17 +392,16 @@ public class MetamapService {
         request.setSnapshot(consult.getSnapshot());
         request.setSource(consult.getSource());
 
-        System.out.println("Get all texts by version and source...");
+        logger.info("Get all texts by source and snapshot...");
         List<ResponseText> responseTexts = consultHelper.findTextsByVersionAndSource( consult );
-        System.out.println("size: " + responseTexts.size());
-        if (responseTexts != null) {
+        logger.info("Size of the text list: " + responseTexts.size());
+        if (responseTexts.size()>0) {
             int countRT = 1;
             for (ResponseText responseText : responseTexts) {
                 if (countRT == 1){
                     sourceId = responseText.getSourceId();
                     version = responseText.getVersion();
                 }
-
                 Text text = new Text();
                 text.setId( responseText.getTextId() );
                 text.setText( responseText.getText() );
@@ -432,23 +430,23 @@ public class MetamapService {
             request.setToken(Constants.TOKEN);
 
             //System.out.println( "Request: " + request);
-            System.out.println( "Connection_ with METAMAP API..." );
-            System.out.println( "Founding medical concepts in a texts... please wait, this process can take from minutes to hours... " );
+            logger.info("Connection_ with METAMAP API..." );
+            logger.info( "Founding medical concepts in a texts... please wait, this process can take from minutes to hours (about 24hrs for Wikipedia)... " );
             Response response = metamapResourceService.filterTexts( request );
-            System.out.println( "Texts Size request..." + request.getTextList().size());
-            System.out.println( "Filter Texts Size response..." + response.getTextList().size() );
+            logger.info( "Texts Size request..." + request.getTextList().size());
+            logger.info( "Filter Texts Size response..." + response.getTextList().size() );
             response.setAuthorized(response.getTextList().size()>=request.getTextList().size());
-            System.out.println("Authorization: "+ response.isAuthorized());
+            logger.info("Authorization: "+ response.isAuthorized());
 
             if (response.isAuthorized()) {
-                System.out.println("save metamap reponse...");
-                ProcessedText processedText = new ProcessedText();
-                processedText.setTexts(response.getTextList());
+//                logger.info("save metamap reponse...");
+//                ProcessedText processedText = new ProcessedText();
+//                processedText.setTexts(response.getTextList());
 //                writeJSONFile(gson.toJson(processedText), utilDate.dateFormatyyyyMMdd(version));
 //                writeJSONFile(gson.toJson(response), consult /*utilDate.dateFormatyyyyMMdd(version) utilDate.getNowFormatyyyyMMdd()*/);//response => cambio para almacenar la configuración con la cual se ejecuto metamap
-                System.out.println("save metamap ready...");
+//                System.out.println("save metamap ready...");
 
-                System.out.println("Insert configuration...");
+                System.out.println("Insert MetaMap Configuration...");
                 String configurationJson = gson.toJson(request.getConfiguration());
                 configurationHelper.insert(consult.getSource(), sourceId, version, constants.SERVICE_METAMAP_CODE, configurationJson);
             }else{
@@ -969,10 +967,13 @@ public class MetamapService {
         symptoms = removeRepetedSymptomsJpa(symptoms);
         System.out.println("symptoms sin repetir size: " + symptoms.size());
         edu.ctb.upm.midas.model.jpa.Symptom existS = null;
-//        for (edu.ctb.upm.midas.model.jpa.Symptom symp: symptoms) {
-//            existS = symptomService.findById(symp.getCui());
-//            if (existS==null) symptomService.insertNative(symp.getCui(), symp.getName());
-//        }
+        for (edu.ctb.upm.midas.model.jpa.Symptom symp: symptoms) {
+            existS = symptomService.findById(symp.getCui());
+            if (existS==null) {
+//                System.out.println("NUEVO SINTOMA: " + symp.getCui() + " | " + symp.getName());
+                symptomService.insertNative(symp.getCui(), symp.getName());
+            }
+        }
 
         symptomsAux = removeRepetedSymptoms(symptomsAux);
         //formar inserts para los sintomas y sus tipos semanticos
@@ -1002,21 +1003,21 @@ public class MetamapService {
         System.out.println("has_symptoms size: " + hasSymptoms.size());
 
 //        //es necesario quitar los que ya estan en la base de datos
-        logger.info("START batch symptoms insert");
-        symptomService.insertInBatch(symptoms);
-        logger.info("END batch symptoms insert");
+//        logger.info("START batch symptoms insert");
+//        symptomService.insertInBatch(symptoms);
+//        logger.info("END batch symptoms insert");
 
-        logger.info("START batch symptoms insert");
-        semanticTypeService.insertInBatch(semanticTypes);
-        logger.info("END batch symptoms insert");
-
-        logger.info("START batch has semantic types insert");
-        hasSemanticTypeService.insertInBatch(hasSemTypes);
-        logger.info("END batch has semantic types insert");
-
-        logger.info("START batch has symptom insert");
-        hasSymptomService.insertInBatch(hasSymptoms);
-        logger.info("END batch has symptom insert");
+//        logger.info("START batch symptoms insert");
+//        semanticTypeService.insertInBatch(semanticTypes);
+//        logger.info("END batch symptoms insert");
+//
+//        logger.info("START batch has semantic types insert");
+//        hasSemanticTypeService.insertInBatch(hasSemTypes);
+//        logger.info("END batch has semantic types insert");
+//
+//        logger.info("START batch has symptom insert");
+//        hasSymptomService.insertInBatch(hasSymptoms);
+//        logger.info("END batch has symptom insert");
 
 //        logger.info("START batch has symptom insert");
 //        int cHsympt = 1;

@@ -40,8 +40,8 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     @Transactional(propagation= Propagation.REQUIRED,readOnly=true)
-    public Date findLastVersionNative() {
-        return daoDocument.findLastVersionNative();
+    public Date findLastVersionNative(String source) {
+        return daoDocument.findLastVersionNative(source);
     }
 
     @Transactional(propagation= Propagation.REQUIRED,readOnly=true)

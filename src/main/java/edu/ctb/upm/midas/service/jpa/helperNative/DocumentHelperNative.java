@@ -306,10 +306,6 @@ public class DocumentHelperNative {
         return documentId + ".V" + utilDate.dateFormatyyyyMMdd(version);
     }
 
-    public Date getLastVersion(){
-        return documentService.findLastVersionNative();
-    }
-
     public boolean findDocument(String documentId, Date version){
         Document document = documentService.findById(new DocumentPK(documentId, utilDate.convertUtilDateToSQLDate(version)));
         if (document!=null) return true;

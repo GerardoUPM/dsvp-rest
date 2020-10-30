@@ -1,4 +1,4 @@
-package edu.ctb.upm.midas.model.filter.common.component;
+package edu.ctb.upm.midas.service.filter.helper;
 
 import edu.ctb.upm.midas.service.jpa.SourceService;
 import edu.ctb.upm.midas.service.jpa.SymptomService;

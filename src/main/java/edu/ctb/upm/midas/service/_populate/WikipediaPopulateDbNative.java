@@ -169,7 +169,6 @@ public class WikipediaPopulateDbNative {
                 //<editor-fold desc="INSERTAR TEXTO">
                 textHelperNative.insert(text, sectionId, documentId, version, isJSONRequest);
                 //</editor-fold>
-
                 textCount++;
             }// Textos
 

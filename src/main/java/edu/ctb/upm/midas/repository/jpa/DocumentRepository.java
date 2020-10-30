@@ -25,7 +25,7 @@ public interface DocumentRepository {
 
     Document findByIdNativeResultClass(DocumentPK documentPK);
 
-    Date findLastVersionNative();
+    Date findLastVersionNative(String source);
 
     List<Document> findAllQuery();
 
