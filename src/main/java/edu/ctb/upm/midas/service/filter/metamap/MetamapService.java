@@ -431,7 +431,7 @@ public class MetamapService {
 
             //System.out.println( "Request: " + request);
             logger.info("Connection_ with METAMAP API..." );
-            logger.info( "Founding medical concepts in a texts... please wait, this process can take from minutes to hours (about 24hrs for Wikipedia)... " );
+            logger.info( "Founding medical concepts in a texts... please wait, this process can take from minutes to hours (about 24hrs for " + consult.getSource() + ")... " );
             Response response = metamapResourceService.filterTexts( request );
             logger.info( "Texts Size request..." + request.getTextList().size());
             logger.info( "Filter Texts Size response..." + response.getTextList().size() );

@@ -1,6 +1,7 @@
 package edu.ctb.upm.midas.scheduling;
 
 import edu.ctb.upm.midas.common.util.TimeProvider;
+import edu.ctb.upm.midas.constants.Constants;
 import edu.ctb.upm.midas.service.EmailService;
 import edu.ctb.upm.midas.service._extract.WikipediaExtractService;
 import edu.ctb.upm.midas.service.jpa.DocumentService;

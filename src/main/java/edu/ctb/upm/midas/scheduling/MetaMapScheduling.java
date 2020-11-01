@@ -96,7 +96,7 @@ public class MetaMapScheduling {
             boolean resp = callMetaMapMedicalTermFinder(Constants.SOURCE_MAYOCLINIC);
             logger.info("Get MetaMap Medical Terms Procedure (MayoClinic) => Scheduled task for the second of each month at midnight " + timeProvider.getNowFormatyyyyMMdd() + " END.");
         }catch (Exception e){
-            logger.error("Error to Get MetaMap Medical Terms Procedure (MayoClinic) (getMetaMapMedicalTermsInfOnWikipediaSnapshotEveryFirstDayOfTheMonthBy()): " + e.getMessage());
+            logger.error("Error to Get MetaMap Medical Terms Procedure (MayoClinic) (getMetaMapMedicalTermsInfOnMayoClinicSnapshotEveryFirstDayOfTheMonthBy()): " + e.getMessage());
         }
     }
 
@@ -107,7 +107,7 @@ public class MetaMapScheduling {
             boolean resp = callMetaMapMedicalTermFinder(Constants.SOURCE_MAYOCLINIC);
             logger.info("Get MetaMap Medical Terms Procedure (MayoClinic) => Scheduled for the 16th of each month at midnight " + timeProvider.getNowFormatyyyyMMdd() + " END.");
         }catch (Exception e){
-            logger.error("Error to Get MetaMap Medical Terms Procedure (MayoClinic) => (getMetaMapMedicalTermsInfOnWikipediaSnapshotEvery15thDayOfTheMonthBy()): " + e.getMessage());
+            logger.error("Error to Get MetaMap Medical Terms Procedure (MayoClinic) => (getMetaMapMedicalTermsInfOnMayoClinicSnapshotEvery15thDayOfTheMonthBy()): " + e.getMessage());
         }
     }
 
@@ -118,7 +118,7 @@ public class MetaMapScheduling {
             boolean resp = callMetaMapMedicalTermBatchInsertions(Constants.SOURCE_MAYOCLINIC);
             logger.info("Batch Insert MetaMap Medical Terms Procedure (MayoClinic) => Scheduled task for the third of each month at midnight " + timeProvider.getNowFormatyyyyMMdd() + " END.");
         }catch (Exception e){
-            logger.error("Error to Batch Insert MetaMap Medical Terms Procedure (MayoClinic) => (fastInsertMetaMapMedicalTermsInfOnWikipediaSnapshotEveryFirstDayOfTheMonthBy()): " + e.getMessage());
+            logger.error("Error to Batch Insert MetaMap Medical Terms Procedure (MayoClinic) => (fastInsertMetaMapMedicalTermsInfOnMayoClinicSnapshotEveryFirstDayOfTheMonthBy()): " + e.getMessage());
         }
     }
 
